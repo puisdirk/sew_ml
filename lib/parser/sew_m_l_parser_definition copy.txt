@@ -1,0 +1,248 @@
+
+import 'dart:math';
+
+import 'package:petitparser/petitparser.dart';
+import 'package:sew_ml/ast/coordinate.dart';
+import 'package:sew_ml/ast/line.dart';
+import 'package:sew_ml/ast/maths_helper.dart';
+import 'package:sew_ml/ast/measurement.dart';
+import 'package:sew_ml/ast/parser_element.dart';
+import 'package:sew_ml/ast/point.dart';
+import 'package:sew_ml/ast/quadratic_bezier.dart';
+import 'package:sew_ml/parser/sew_m_l_grammar_definition.dart';
+
+//final _definition = SewMLParserDefinition();
+//Parser<ParserElement> drawCommandParser() => _definition.buildFrom(_definition.start()).end();
+
+/// Overrides to map to our AST objects
+class SewMLParserDefinition extends SewMLGrammarDefinition {
+  final Map<String, Measurement> _measurements;
+  int _currentLineNumber = 0;
+  final Map<String, ParserElement> _parserElements = {'origin': Point(fromLineNumber: 0, label: 'origin', coordinate: Coordinate(0.0, 0.0))};  // The points, lines and curves thus far
+
+  SewMLParserDefinition([Map<String, Measurement>? measurements]) : _measurements = measurements == null ? const{} : Map.from(measurements), super();
+
+  // We get a list of ParserElement
+  @override
+  Parser<List<ParserElement>> start() {
+    _currentLineNumber = 1;
+    return super.start().castList();
+  }
+
+  // Increment line number
+  @override
+  Parser command() => super.command().map((result) {
+    _currentLineNumber = _currentLineNumber + 1;
+    return result;
+  });
+
+  // We get [<length in mm>, <angle in radians>, <start coordinate>]. From this, we need to return a new Coordinate.
+  @override
+  Parser<Coordinate> coordRelativeToCoord() => super.coordRelativeToCoord().map((result) {
+    double distance = result[0];
+    double theta = result[1];
+    Coordinate from = result[2];
+    return MathsHelper.relativepointatangle(from, distance, theta);
+  });
+
+  // We get [length, <cm/mm>]. We return the length in mm
+  @override
+  Parser<double> mmLength() => super.mmLength().map((result) {
+    double multiplier = 1.0;
+    if (result[1] == 'cm') {
+      multiplier = 10.0;
+    } else if (result[1] == 'mm') {
+      multiplier = 1.0;
+    }
+    return multiplier * result[0];
+  });
+
+  // We get a direction string and return the corresponding angle in radians
+  @override
+  Parser<double> direction() => super.direction().map((result) {
+    if (result == 'north' || result == 'up') {
+      return pi / 2.0;  // 90.0;
+    }
+    if (result == 'east' || result == 'right') {
+      return 2.0 * pi; // 0;
+    }
+    if (result == 'west' || result == 'left') {
+      return pi; // 180.0;
+    }
+    if (result == 'south' || result == 'down') {
+      return (pi * 3.0) / 2.0; // 270.0;
+    }
+
+    if (result == 'northeast') {
+      return  MathsHelper.degreesToRadians(45.0);
+    }
+    if (result == 'northwest') {
+      return  MathsHelper.degreesToRadians(135.0);
+    }
+    if (result == 'southeast') {
+      return  MathsHelper.degreesToRadians(315.0);
+    }
+    if (result == 'southwest') {
+      return  MathsHelper.degreesToRadians(225.0);
+    }
+
+
+    throw Exception('Unexpected input for direction: "$result"');
+  });
+
+  // We get [<angle in degrees>, 'deg'] and return the angle in radians
+  @override
+  Parser<double> angleInDegrees() => super.angleInDegrees().map((result) => MathsHelper.degreesToRadians(result[0]));
+
+  // We get [<angle in radians>, 'rad'] and return the angle in radians
+  @override
+  Parser<double> angleInRadians() => super.angleInRadians().map((result) => result[0]);
+
+  // We get ['from/of/to', <pointlabel>]
+  @override
+  Parser<Coordinate> coordinateOfPoint() {
+    return super.coordinateOfPoint().map((result) {
+      String pointLabel = result[1];
+      if (!_parserElements.containsKey(pointLabel)) {
+        throw ArgumentError('Could not find point $pointLabel');
+      }
+      final p = _parserElements[pointLabel];
+      if (p is! Point) {
+        throw ArgumentError('$pointLabel is not a Point');
+      }
+
+      return p.coordinate;
+    });
+  }
+
+  // We get ['point', <point label>, <coord>]. We create a new Point.
+  @override
+  Parser<Point> point() => super.point().map((result) {
+    String label = result[1];
+    if (_parserElements.containsKey(label)) {
+      throw Exception('$label already exists');
+    }
+    Coordinate coord = result[2];
+    coord.setPrecision(2);
+    final Point p = Point(
+      fromLineNumber: _currentLineNumber,
+      label: label,
+      coordinate: coord,
+    );
+    _parserElements.putIfAbsent(p.label, () => p);
+    return p;
+  });
+
+  // we get ['line', <line label>, <coord1>, <coord2>]. We create a new Line
+  @override
+  Parser<Line> line() => super.line().map((result) {
+    String label = result[1];
+    if (_parserElements.containsKey(label)) {
+      throw Exception('$label already exists');
+    }
+    Coordinate coord1 = result[2];
+    Coordinate coord2 = result[3];
+    Line l =  Line(fromLineNumber: _currentLineNumber, label: label, startPoint: coord1, endPoint: coord2);
+    _parserElements.putIfAbsent(l.label, () => l);
+    return l;
+  });
+
+  @override
+  Parser<double> pMeasurement() => super.pMeasurement().map((result) {
+    String measurementName = result;
+    measurementName = measurementName.trim();
+    if (!_measurements.containsKey(measurementName)) {
+      throw Exception('Measurement $measurementName not found');
+    }
+
+    return _measurements[measurementName]!.valueInMMorRad;
+  });
+
+  // We get [<linelabel>, <.functionname, e.g. .length>]
+  // Currently only supports .length, but we could have .perpendicular or .parallel
+  @override
+  Parser linefunction() => super.linefunction().map((result) {
+    String linelabel = result[0];
+    String functionname = result[1];
+
+    if (!_parserElements.containsKey(linelabel)) {
+      throw ArgumentError.value(linelabel, 'Unknown line label', 'Unknown line label $linelabel');
+    }
+
+    final l = _parserElements[linelabel];
+    if (l is! Line) {
+      throw ArgumentError('Element $linelabel is not a line');
+    }
+
+    switch(functionname) {
+      case '.length':
+        return l.lengthInMM();
+
+      default:
+        throw ArgumentError('Unknown function $functionname');
+    }
+  });
+
+  // We receive ['curve', <curvelabel>, 'through', 4[<pointlabel>, ...]]
+  // TODO: not yet implemented
+  @override
+  Parser curveThroughFourPoints() =>
+    super.curveThroughFourPoints().map((result) {
+      return result;
+    });
+
+  // We receive ['curve', <curvelabel>, <intensityfraction>, 'from', <pointlabel>, 'to', <pointlabel>]
+  @override
+  Parser<QuadraticBezier> curveThroughTwoPoints() =>
+    super.curveThroughTwoPoints().map((result) {
+      String curvelabel = result[1];
+      String direction = result[2]; // 'pos' or 'neg'
+      double intensityfraction = result[3];
+      String startPointLabel = result[5];
+      String endPointLabel = result[7];
+
+      if (_parserElements.containsKey(curvelabel)) {
+        throw ArgumentError('$curvelabel already exists');
+      }
+
+      if (!_parserElements.containsKey(startPointLabel)) {
+        throw ArgumentError('Could not find point $startPointLabel');
+      }
+      final startPoint = _parserElements[startPointLabel];
+      if (startPoint is! Point) {
+        throw ArgumentError('$startPointLabel is not a Point');
+      }
+
+      if (!_parserElements.containsKey(endPointLabel)) {
+        throw ArgumentError('Could not find point $endPointLabel');
+      }
+      final endPoint = _parserElements[endPointLabel];
+      if (endPoint is! Point) {
+        throw ArgumentError('$endPointLabel is not a Point');
+      }
+
+      // We put a control point above the midpoint at a fraction of the line length.
+      // E.g. points 0,0 and 10,0 with fraction 1/5 will put the control point at 5,2
+      //            0
+      //            |
+      //  0--------------------0
+      final double linelength = MathsHelper.distance(startPoint.coordinate, endPoint.coordinate);
+      final double deviationfromline = linelength * intensityfraction;
+
+      final Coordinate midpoint = MathsHelper.middleOfLine(startPoint.coordinate, endPoint.coordinate);
+      
+      final angleOfLine = MathsHelper.angleOfLine(startPoint.coordinate, endPoint.coordinate);
+      final perpendicularAngle = direction == 'pos' ? angleOfLine + (pi / 2.0) : angleOfLine - (pi / 2.0);
+      final Coordinate controlPointCoordinate = MathsHelper.relativepointatangle(midpoint, deviationfromline, perpendicularAngle);
+
+      QuadraticBezier b = QuadraticBezier(
+        fromLineNumber: _currentLineNumber, 
+        label: curvelabel, 
+        startPoint: startPoint.coordinate, 
+        endPoint: endPoint.coordinate, 
+        controlPoint: controlPointCoordinate);
+      _parserElements.putIfAbsent(b.label, () => b);
+      return b;
+    });
+  
+}
