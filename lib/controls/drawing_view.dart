@@ -5,6 +5,7 @@ import 'package:sew_ml/controls/drawing_control.dart';
 import 'package:sew_ml/controls/layout_control.dart';
 import 'package:sew_ml/controls/manage_templates_view.dart';
 import 'package:sew_ml/controls/print_settings_view.dart';
+import 'package:sew_ml/controls/syntax_error_indicator.dart';
 import 'package:sew_ml/controls/valid_line_indicator.dart';
 import 'package:sew_ml/service/page_layout.dart';
 import 'package:sew_ml/service/page_layout_service.dart';
@@ -141,6 +142,11 @@ class _DrawingViewState extends State<DrawingView> {
                           onSelection: (int newMaxValidLineNumber) => setState(() {
                             maxValidLineNumber = newMaxValidLineNumber;
                           })
+                        ),
+                        SyntaxErrorIndicator(
+                          controller: editingController,
+                          notifier: notifier,
+                          width: 20,
                         ),
                         DefaultCodeLineNumber(
                           controller: editingController,

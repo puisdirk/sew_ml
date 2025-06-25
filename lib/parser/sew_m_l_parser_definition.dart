@@ -21,14 +21,13 @@ import 'package:sew_ml/service/templates_service.dart';
 
 /// Overrides to map to our AST objects
 class SewMLParserDefinition extends SewMLGrammarDefinition {
-//  static final Map<String, SubCommandsGroup> _templates = {
-//    'aldrich_classic_sleeve': AldrichClassicSleeve(),
-//    'aldrich_classic_bodice': AldrichClassicBodice(),
-//  };
+
   final Map<String, Measurement> _measurements;
   int _currentLineNumber = 0;
+
+  // The points, lines and curves thus far
   final Map<String, ParserElement> _parserElements = {
-    'origin': Point(/*fromLineNumber: 0, */label: 'origin', coordinate: Coordinate(0.0, 0.0))};  // The points, lines and curves thus far
+    'origin': Point(label: 'origin', coordinate: Coordinate(0.0, 0.0))};
 
   SewMLParserDefinition([Map<String, Measurement>? measurements]) : _measurements = measurements == null ? {} : Map.from(measurements), super();
 
