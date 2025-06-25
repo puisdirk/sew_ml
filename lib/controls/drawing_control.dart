@@ -28,7 +28,11 @@ class DrawingControl extends StatelessWidget {
     if (maxValidLineNumber != -1) {
       validCommands = validCommands.sublist(0, maxValidLineNumber);
     }
-    Drawing drawing = Drawing.parse(validCommands, _measurements);
+
+    Drawing drawing = Drawing.checkSyntax(validCommands);
+    if (!drawing.hasError) {
+      drawing = Drawing.parse(validCommands, _measurements);
+    }
 
   /*
     // TODO: Could use following to check line per line if the grammar is correct, but still doesn't
@@ -50,7 +54,7 @@ class DrawingControl extends StatelessWidget {
             size: Size((screenSize.width / 2) * 0.9, (screenSize.height / 2) * 0.9),
             painter: DrawingPainter(drawing: drawing),
           ),
-          drawing.hasError ? Text('Position: ${drawing.errorPosition}: ${drawing.errorMessage}') : const Text('valid'),
+          drawing.hasError ? Text('Errors: ${drawing.errorsSummary}') : const Text('valid'),
         ],
       ),
     );

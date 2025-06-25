@@ -7,6 +7,19 @@ import 'package:sew_ml/ast/parser_element.dart';
 /// Parses one line of sewMl
 class SewMLGrammarDefinition extends GrammarDefinition {
 
+  Map<String, Parser> getNamedParsers() {
+    return {
+      'point': buildFrom(point().end()),
+      'line': buildFrom(line().end()),
+      'curve': buildFrom(line().end()),
+      'part': buildFrom(part().end()),
+      'measurement': buildFrom(measurement().end()),
+      'exec': buildFrom(exec().end()),
+      'layout': buildFrom(layout().end()),
+      'unknown': buildFrom(command().end()),
+    };
+  }
+
   @override
   Parser<List> start() => (ref0(command).star() & string('.')).pick(0).castList();
   
