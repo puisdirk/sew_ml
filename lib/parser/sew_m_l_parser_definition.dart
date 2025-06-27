@@ -13,6 +13,7 @@ import 'package:sew_ml/ast/parts_layout.dart';
 import 'package:sew_ml/ast/point.dart';
 import 'package:sew_ml/ast/quadratic_bezier.dart';
 import 'package:sew_ml/ast/relative_placement.dart';
+import 'package:sew_ml/ast/sub_commands_group.dart';
 import 'package:sew_ml/parser/sew_m_l_grammar_definition.dart';
 import 'package:sew_ml/service/templates_service.dart';
 
@@ -21,6 +22,20 @@ import 'package:sew_ml/service/templates_service.dart';
 
 /// Overrides to map to our AST objects
 class SewMLParserDefinition extends SewMLGrammarDefinition {
+
+  @override
+  Map<String, Parser<ParserElement>> getNamedParsers() {
+    return {
+      'point': buildFrom(point().end()),
+      'line': buildFrom(line().end()),
+      'curve': buildFrom(line().end()),
+      'part': buildFrom(part().end()),
+      'measurement': buildFrom(measurement().end()),
+      'exec': buildFrom(exec().end()),
+      'layout': buildFrom(layout().end()),
+      'unknown': buildFrom(command().end()),
+    };
+  }
 
   final Map<String, Measurement> _measurements;
   int _currentLineNumber = 0;
@@ -47,7 +62,7 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
 
   // We get ['part', <partlabel>, <list of labels>]
   @override
-  Parser part([String message = 'Expected part definition']) {
+  Parser<Part> part([String message = 'Expected part definition']) {
     return super.part(message).map((result) {
       List<ParserElement> elements = [];
       for (dynamic label in result[2]) {
@@ -191,14 +206,14 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
 
   // we get ['measurement', <label>, <mmlength>]
   @override
-  Parser measurement([String message = 'Expected measurement definition']) => super.measurement().map((result) {
+  Parser<Measurement> measurement([String message = 'Expected measurement definition']) => super.measurement().map((result) {
     String label = result[1];
     label = label.trim();
     double length = result[2];
 
     if (_measurements.containsKey(label)) {
       // return the existing one
-      return _measurements[label]; 
+      return _measurements[label]!; 
     }
 
     Measurement m = Measurement(label: label, valueInMMorRad: length);
@@ -423,7 +438,7 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
     //================== Functions/Samples ==============
     // We get exec <name>
     @override
-    Parser exec() => super.exec().map((result) {
+    Parser<SubCommandsGroup> exec() => super.exec().map((result) {
       String label = result[1];
 
       // TODO: could do a lot with this. For now, it is just for samples
@@ -437,7 +452,7 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
 
     //================== Layouts =====================
     @override
-    Parser layout() {
+    Parser<PartsLayout> layout() {
       return super.layout().map((result) {
         PartsLayout layout = _parserElements.putIfAbsent(PartsLayout.defaultLayoutLabel, () => PartsLayout()) as PartsLayout;
         String partLabel = result[1][0];

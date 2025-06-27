@@ -8,13 +8,11 @@ import 'package:sew_ml/service/page_layout_service.dart';
 import 'package:sew_ml/service/pdf_service.dart';
 
 class LayoutControl extends StatelessWidget {
-  final List<String> commands;
-  final int maxValidLineNumber;
+  final Drawing drawing;
   final bool _showPageBreaks;
 
   const LayoutControl({
-    required this.commands,
-    required this.maxValidLineNumber,
+    required this.drawing,
     bool showPageBreaks = true,
     super.key
   }) : _showPageBreaks = showPageBreaks;
@@ -22,12 +20,6 @@ class LayoutControl extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-    List<String> validCommands = List.from(commands);
-    if (maxValidLineNumber != -1) {
-      validCommands = validCommands.sublist(0, maxValidLineNumber);
-    }
-    Drawing drawing = Drawing.parse(validCommands, {});
-
     return Center(
       child: FutureBuilder<PageLayout>(
         future: PageLayoutService().getPageLayout(),
@@ -61,23 +53,17 @@ class LayoutPainter extends CustomPainter {
     ..color = Colors.grey.shade400
     ..style = PaintingStyle.stroke;
 
+    canvas.drawRect(Rect.fromCenter(center: midpoint, width: size.width, height: size.height), borderPaint);
+
     Paint partPaint = Paint()
     ..color = Colors.green.shade700
     ..strokeWidth = 3.0
     ..style = PaintingStyle.stroke;
 
-/*    Paint redPaint = Paint()
-    ..color = Colors.red.shade700
-    ..strokeWidth = 3.0
-    ..style = PaintingStyle.stroke;
-*/
-
     Paint pageGuidesPaint = Paint()
     ..color = Colors.red.shade400
     ..strokeWidth = 1.0
     ..style = PaintingStyle.stroke;
-
-    canvas.drawRect(Rect.fromCenter(center: midpoint, width: size.width, height: size.height), borderPaint);
 
     Map<String, Path> paths = drawing.getLayoutPaths(midpoint: midpoint);
 

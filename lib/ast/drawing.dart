@@ -4,9 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:petitparser/petitparser.dart';
 import 'package:sew_ml/ast/coordinate.dart';
+import 'package:sew_ml/ast/elements_and_errors.dart';
 import 'package:sew_ml/ast/line.dart';
 import 'package:sew_ml/ast/maths_helper.dart';
-import 'package:sew_ml/ast/measurement.dart';
 import 'package:sew_ml/ast/parser_element.dart';
 import 'package:sew_ml/ast/parser_error.dart';
 import 'package:sew_ml/ast/part.dart';
@@ -20,19 +20,18 @@ import 'package:sew_ml/parser/sew_m_l_grammar_definition.dart';
 import 'package:sew_ml/parser/sew_m_l_parser_definition.dart';
 
 class Drawing {
-  Map<String, Measurement> _measurements;
-
   List<ParserElement> _parserElements = [];
-  
   List<ParserError> _errors = [];
 
-  factory Drawing.parse(List<String> drawCommands, [Map<String, Measurement>? measurements]) {
-    SewMLParserDefinition parserDefinition = SewMLParserDefinition(measurements);
-    Parser<ParserElement> parser = parserDefinition.buildFrom(parserDefinition.command()).end();
+  factory Drawing.parse(List<String> drawCommands) {
+    SewMLParserDefinition parserDefinition = SewMLParserDefinition();
+    //Parser<ParserElement> parser = parserDefinition.buildFrom(parserDefinition.command()).end();
 
-    List<ParserElement> elements = _getElements(parser, drawCommands);
+    Map<String, Parser<ParserElement>> parsers = parserDefinition.getNamedParsers();
 
-    return Drawing(measurements, elements);
+    ElementsAndErrors elementsAndErrors = _getElements(parsers, drawCommands);
+
+    return Drawing(elementsAndErrors);
   }
 
   factory Drawing.checkSyntax(List<String> drawCommands) {
@@ -41,7 +40,7 @@ class Drawing {
 
     List<ParserError> errors = _checkSyntax(parsers, drawCommands);
 
-    return Drawing.errors(null, errors);
+    return Drawing.errors(errors);
   }
 
   static List<ParserError> _checkSyntax(Map<String, Parser> parsers, List<String> drawCommands) {
@@ -68,31 +67,44 @@ class Drawing {
     return errors;
   }
 
-  static List<ParserElement> _getElements(Parser<ParserElement> parser, List<String> drawCommands) {
-    List<ParserElement> elements = [];
+  static ElementsAndErrors _getElements(Map<String, Parser<ParserElement>> parsers, List<String> drawCommands) {
+    ElementsAndErrors elementsAndErrors = ElementsAndErrors();
     
+    int lineNumber = 1;
     for (String drawCommand in drawCommands) {
+      String keyword = 'unknown';
+      int end = drawCommand.indexOf(' ');
+      if (end != -1) {
+        keyword = drawCommand.substring(0, end);
+      } else {
+        keyword = drawCommand;
+      }
+
+      Parser parser = parsers.containsKey(keyword) ? parsers[keyword]! : parsers['unknown']!;
+
       switch(parser.parse(drawCommand)) {
         case Success(value: final value):
           if (value is SubCommandsGroup) {
             // We got back a list of commands, we recurse
-            elements.addAll(_getElements(parser, value.subCommands));
+            elementsAndErrors.addAll(_getElements(parsers, value.subCommands));
           } else {
             // Got back a ParserElement
-            elements.add(value);
+            elementsAndErrors.addElement(value);
           }
         case Failure(position: final position, message: final message):
-          //throw ArgumentError('$message at position $position');
+          elementsAndErrors.addError(ParserError(message: message, lineNumber: lineNumber, linePosition: position));
       }
+      lineNumber++;
     }
-    return elements;
+    return elementsAndErrors;
   }
 
-  Drawing(Map<String, Measurement>? measurements, List<ParserElement> parserElements) : _measurements = measurements == null ? {} : Map.from(measurements), _parserElements = List.from(parserElements)..add(Point(label: 'origin', coordinate: Coordinate(0.0, 0.0)));
-  Drawing.errors(Map<String, Measurement>? measurements, List<ParserError> errors) : _measurements = measurements == null ? {} : Map.from(measurements), _errors = List.from(errors);
+  Drawing(ElementsAndErrors elementsAndErrors) : 
+    _parserElements = List.from(elementsAndErrors.elements)..add(Point(label: 'origin', coordinate: Coordinate(0.0, 0.0))), 
+    _errors = elementsAndErrors.errors;
+  Drawing.errors(List<ParserError> errors) : _errors = List.from(errors);
 
   List<ParserElement> get elements => _parserElements;
-  Map<String, Measurement> get measurements => _measurements;
 
   bool get hasError => _errors.isNotEmpty;
   List<ParserError> get errors => _errors;
@@ -230,14 +242,13 @@ class Drawing {
   }
 
   @override
-  int get hashCode => super.hashCode ^ measurements.hashCode ^ _parserElements.hashCode ^ _errors.hashCode;
+  int get hashCode => super.hashCode ^ _parserElements.hashCode ^ _errors.hashCode;
 
   @override
   bool operator ==(Object other) =>
     identical(this, other) ||
     other is Drawing &&
       runtimeType == other.runtimeType &&
-      mapEquals(_measurements, other._measurements) &&
       listEquals(_parserElements, other._parserElements) &&
-      _errors == other._errors;
+      listEquals(_errors, other._errors);
 }
