@@ -4,48 +4,22 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:sew_ml/ast/drawing.dart';
 import 'package:sew_ml/ast/line.dart';
-import 'package:sew_ml/ast/measurement.dart';
 import 'package:sew_ml/ast/parser_element.dart';
 import 'package:sew_ml/ast/part.dart';
 import 'package:sew_ml/ast/point.dart';
 import 'package:sew_ml/ast/quadratic_bezier.dart';
 
 class DrawingControl extends StatelessWidget {
-  final List<String> commands;
-  final int maxValidLineNumber;
-  final Map<String, Measurement> _measurements = {};
+  final Drawing drawing;
   
-  DrawingControl({
-    required this.commands,
-    required this.maxValidLineNumber,
+  const DrawingControl({
+    required this.drawing,
     super.key
   });
 
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-    List<String> validCommands = List.from(commands);
-    if (maxValidLineNumber != -1) {
-      validCommands = validCommands.sublist(0, maxValidLineNumber);
-    }
-
-    Drawing drawing = Drawing.checkSyntax(validCommands);
-    if (!drawing.hasError) {
-      drawing = Drawing.parse(validCommands, _measurements);
-    }
-
-  /*
-    // TODO: Could use following to check line per line if the grammar is correct, but still doesn't
-    // give me proper error messages
-    SewMLGrammarDefinition def = SewMLGrammarDefinition();
-    Parser p = def.buildFrom(def.command()).end();
-    for (String command in commands) {
-      Result accepted = p.parse('$command|');
-      if (accepted is Failure) {
-        print('line $command has an error');
-      }
-    }
-  */
 
     return Center(
       child: Column(
@@ -54,7 +28,7 @@ class DrawingControl extends StatelessWidget {
             size: Size((screenSize.width / 2) * 0.9, (screenSize.height / 2) * 0.9),
             painter: DrawingPainter(drawing: drawing),
           ),
-          drawing.hasError ? Text('Errors: ${drawing.errorsSummary}') : const Text('valid'),
+//          drawing.hasError ? Text('Errors: ${drawing.errorsSummary}') : const Text('valid'),
         ],
       ),
     );
@@ -168,21 +142,17 @@ class DrawingPainter extends CustomPainter {
         canvas.drawPath(p, curvesPaint);
       }
       if (el is Part) {
-        print('=================${el.label}================');
         for (ParserElement partElement in el.elements) {
           if (partElement is Point) {
             canvas.drawCircle(Offset(partElement.coordinate.x, -(partElement.coordinate.y)) + midpoint, 2, partPaint);
           } else if (partElement is Line) {
             canvas.drawLine(Offset(partElement.startPoint.x, -(partElement.startPoint.y)) + midpoint, Offset(partElement.endPoint.x, -(partElement.endPoint.y)) + midpoint, partPaint);
-            print('canvas.drawLine(Offset(${partElement.startPoint.x}, -(${partElement.startPoint.y})), Offset(${partElement.endPoint.x}, -(${partElement.endPoint.y})), partPaint);');
           } else if (partElement is QuadraticBezier) {
             Offset start = Offset(partElement.startPoint.x, -(partElement.startPoint.y)) + midpoint;
             Offset end = Offset(partElement.endPoint.x, -(partElement.endPoint.y)) + midpoint;
             Offset control = Offset(partElement.controlPoint.x, -(partElement.controlPoint.y)) + midpoint;
             Path p = Path()..moveTo(start.dx, start.dy)..quadraticBezierTo(control.dx, control.dy, end.dx, end.dy);
             canvas.drawPath(p, partPaint);
-            print('Path p = Path()..moveTo(${start.dx}, ${start.dy})..quadraticBezierTo(${control.dx}, ${control.dy}, ${end.dx}, ${end.dy});');
-            print('canvas.drawPath(p, partPaint);');
           }
         }
       }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:re_editor/re_editor.dart';
 import 'package:sew_ml/ast/drawing.dart';
+import 'package:sew_ml/ast/elements_and_errors.dart';
 import 'package:sew_ml/controls/drawing_control.dart';
 import 'package:sew_ml/controls/layout_control.dart';
 import 'package:sew_ml/controls/manage_templates_view.dart';
@@ -28,11 +29,16 @@ class _DrawingViewState extends State<DrawingView> {
   late CodeLineEditingController controller;
   int maxValidLineNumber = -1;
   late TextEditingController _templateNameTextController;
+  late Drawing _drawing;
+
+  // Showing errors
+  OverlayEntry? errorOverlay;
 
   @override
   void initState() {
     controller = CodeLineEditingController.fromText(commandsText);
     _templateNameTextController = TextEditingController();
+    _drawing = Drawing(ElementsAndErrors());
     super.initState();
   }
 
@@ -41,6 +47,44 @@ class _DrawingViewState extends State<DrawingView> {
     controller.dispose();
     _templateNameTextController.dispose();
     super.dispose();
+  }
+
+  void _showErrorOverlay(BuildContext context, Offset errorOffset, String errorMessage) {
+    OverlayState overlayState = Overlay.of(context);
+    
+    _hideErrorOverlay();
+
+    errorOverlay = OverlayEntry(builder: (context) {
+      return Positioned(
+        top: errorOffset.dy, 
+        left: errorOffset.dx, 
+        child: Container(
+          padding: const EdgeInsets.all(5),
+          decoration: BoxDecoration(
+            color: Colors.red.shade100, 
+            borderRadius: BorderRadius.circular(5),
+            border: Border.all(color: Colors.red.shade500)
+          ),
+          child: Text(errorMessage, 
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.normal,
+              decorationStyle: TextDecorationStyle.solid,
+              decoration: TextDecoration.none,
+              color: Colors.grey.shade800, 
+            ),
+          ),
+        )
+      );
+    });
+
+    overlayState.insert(errorOverlay!);
+  }
+
+  void _hideErrorOverlay() {
+    if (errorOverlay != null && errorOverlay!.mounted) {
+      errorOverlay?.remove();
+    }
   }
 
   Future<void> _showPrintOptionsDialog(BuildContext context) async {
@@ -115,6 +159,17 @@ class _DrawingViewState extends State<DrawingView> {
     );
   }
 
+  void _updateDrawing() {
+    List<String> validCommands = List.from(commands);
+    if (maxValidLineNumber != -1) {
+      validCommands = validCommands.sublist(0, maxValidLineNumber);
+    }
+    //Drawing syntaxDrawing = Drawing.checkSyntax(validCommands);
+    setState(() {
+      _drawing = Drawing.parse(validCommands);
+    });    
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
@@ -143,14 +198,22 @@ class _DrawingViewState extends State<DrawingView> {
                             maxValidLineNumber = newMaxValidLineNumber;
                           })
                         ),
+                        DefaultCodeLineNumber(
+                          controller: editingController,
+                          notifier: notifier,
+                        ),
                         SyntaxErrorIndicator(
                           controller: editingController,
                           notifier: notifier,
                           width: 20,
-                        ),
-                        DefaultCodeLineNumber(
-                          controller: editingController,
-                          notifier: notifier,
+                          drawing: _drawing,
+                          onShowError: (errorPosition, errorMessage) {
+                            if (errorPosition == Offset.zero || errorMessage.isEmpty) {
+                              _hideErrorOverlay();
+                            } else {
+                              _showErrorOverlay(context, errorPosition, errorMessage);
+                            }
+                          },
                         ),
                       ],
                     );
@@ -160,9 +223,13 @@ class _DrawingViewState extends State<DrawingView> {
               Row(
                 children: [
                   OutlinedButton(
-                    onPressed: () => setState(() => commands = commandsText.split('\n')), 
+                    onPressed: () => setState(() {
+                      commands = commandsText.split('\n');
+                      _updateDrawing();
+                    }),
                     child: const Text('Parse')
                   ),
+                  const SizedBox(width: 20,),
                   OutlinedButton(
                     onPressed: () async {
                       String? templateName = await _getTemplateName(context);
@@ -173,6 +240,7 @@ class _DrawingViewState extends State<DrawingView> {
                     }, 
                     child: const Text('Save as template')
                   ),
+                  const SizedBox(width: 20,),
                   OutlinedButton(
                     onPressed: () async {
                       await _showTemplatesDialog(context);
@@ -185,34 +253,28 @@ class _DrawingViewState extends State<DrawingView> {
           ),
           Column(
             children: [
-              InteractiveViewer(child: DrawingControl(commands: commands, maxValidLineNumber: maxValidLineNumber,)),
-              InteractiveViewer(child: LayoutControl(commands: commands, maxValidLineNumber: maxValidLineNumber,)),
+              InteractiveViewer(child: DrawingControl(drawing: _drawing)),
+              InteractiveViewer(child: LayoutControl(drawing: _drawing)),
               Row(
                 children: [
                   OutlinedButton(
                     onPressed: () async {
-                      List<String> validCommands = List.from(commands);
-                      if (maxValidLineNumber != -1) {
-                        validCommands = validCommands.sublist(0, maxValidLineNumber);
-                      }
-                      Drawing drawing = Drawing.parse(validCommands);
-                      await SvgService.saveAsSvg(drawing);
+                      _updateDrawing();
+                      await SvgService.saveAsSvg(_drawing);
                     },
                     child: const Text('Export to SVG'),
                   ),
+                  const SizedBox(width: 20,),
                   OutlinedButton(
                     onPressed: () async {
-                      List<String> validCommands = List.from(commands);
-                      if (maxValidLineNumber != -1) {
-                        validCommands = validCommands.sublist(0, maxValidLineNumber);
-                      }
                       PageLayout layout = await PageLayoutService().getPageLayout();
                       Offset pageSizeMM = PageLayoutService().getDimensionsForLayout(layout);
-                      Drawing drawing = Drawing.parse(validCommands);
-                      await PdfService.saveAsPdf(drawing, pageWidthMM: pageSizeMM.dx, pageHeightMM: pageSizeMM.dy);
+                      _updateDrawing();
+                      await PdfService.saveAsPdf(_drawing, pageWidthMM: pageSizeMM.dx, pageHeightMM: pageSizeMM.dy);
                     },
                     child: const Text('Export to PDF'),
                   ),
+                  const SizedBox(width: 20,),
                   IconButton(
                     onPressed: () async {
                       await _showPrintOptionsDialog(context);
