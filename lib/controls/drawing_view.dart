@@ -196,6 +196,7 @@ class _DrawingViewState extends State<DrawingView> {
                           maxValidLineNumber: maxValidLineNumber,
                           onSelection: (int newMaxValidLineNumber) => setState(() {
                             maxValidLineNumber = newMaxValidLineNumber;
+                            _updateDrawing();
                           })
                         ),
                         DefaultCodeLineNumber(

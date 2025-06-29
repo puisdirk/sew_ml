@@ -28,7 +28,7 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
     return {
       'point': buildFrom(point().end()),
       'line': buildFrom(line().end()),
-      'curve': buildFrom(line().end()),
+      'curve': buildFrom(curveThroughTwoPoints().end()),
       'part': buildFrom(part().end()),
       'measurement': buildFrom(measurement().end()),
       'exec': buildFrom(exec().end()),
