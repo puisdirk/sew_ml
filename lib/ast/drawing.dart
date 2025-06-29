@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:petitparser/petitparser.dart';
+import 'package:sew_ml/ast/comment.dart';
 import 'package:sew_ml/ast/coordinate.dart';
 import 'package:sew_ml/ast/elements_and_errors.dart';
 import 'package:sew_ml/ast/line.dart';
@@ -87,6 +88,8 @@ class Drawing {
           if (value is SubCommandsGroup) {
             // We got back a list of commands, we recurse
             elementsAndErrors.addAll(_getElements(parsers, value.subCommands));
+          } else if (value is Comment) {
+            // no need to store this
           } else {
             // Got back a ParserElement
             elementsAndErrors.addElement(value);

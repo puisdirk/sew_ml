@@ -2,6 +2,7 @@
 import 'dart:math';
 
 import 'package:petitparser/petitparser.dart';
+import 'package:sew_ml/ast/comment.dart';
 import 'package:sew_ml/ast/parser_element.dart';
 
 /// Parses one line of sewMl
@@ -11,7 +12,7 @@ class SewMLGrammarDefinition extends GrammarDefinition {
     return {
       'point': buildFrom(point().end()),
       'line': buildFrom(line().end()),
-      'curve': buildFrom(line().end()),
+      'curve': buildFrom(curve().end()),
       'part': buildFrom(part().end()),
       'measurement': buildFrom(measurement().end()),
       'exec': buildFrom(exec().end()),
@@ -25,6 +26,7 @@ class SewMLGrammarDefinition extends GrammarDefinition {
   
   Parser<ParserElement> command() => 
     ([
+        ref0(comment),
         ref0(exec),
         ref0(part), 
         ref0(measurement), 
@@ -34,6 +36,8 @@ class SewMLGrammarDefinition extends GrammarDefinition {
         ref0(layout),
         failure('Expected a measurement, point, line, curve, part or layout definition'
       )].toChoiceParser()).cast();
+
+  Parser<Comment> comment() => (string('#') & (word() | whitespace() | anyOf('_-')).plus()).flatten().map((res) => Comment(comment: res));
 
   Parser part([String message = 'Expected part definition']) =>
     string('part').trim() &

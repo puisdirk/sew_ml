@@ -106,17 +106,19 @@ class SyntaxErrorIndicatorRenderObject extends RenderBox implements MouseTracker
   void handleEvent(PointerEvent event, covariant BoxHitTestEntry entry) {
     if (event is PointerHoverEvent) {
       final Offset position = globalToLocal(event.position);
-      final int paragraphIndex = _findParagraphIndexByPosition(position);
-      if (paragraphIndex != _currentlyActiveErrorParagraph) {
-        _currentlyActiveErrorParagraph = paragraphIndex;
+      int visibleParagraphIndex = _findParagraphIndexByPosition(position);
+      int? firstVisibleIndex = _notifier.value?.paragraphs.first.index;
+      int codeLineIndex = visibleParagraphIndex + (firstVisibleIndex ?? 0);
+      if (codeLineIndex != _currentlyActiveErrorParagraph) {
+        _currentlyActiveErrorParagraph = codeLineIndex;
         if (_currentlyActiveErrorParagraph == -1) {
           _onShowError(Offset.zero, '');
         } else {
-          ParserError? error = _drawing.errors.firstWhereOrNull((e) => e.lineNumber - 1 == _currentlyActiveErrorParagraph);
+          ParserError? error = _drawing.errors.firstWhereOrNull((e) => e.lineNumber - 1 == codeLineIndex);
           if (error == null) {
             _onShowError(Offset.zero, '');
           } else {
-            CodeLineRenderParagraph? paragraph = _notifier.value?.paragraphs[_currentlyActiveErrorParagraph];
+            CodeLineRenderParagraph? paragraph = _notifier.value?.paragraphs[visibleParagraphIndex];
             if (paragraph != null) {
               _onShowError(localToGlobal(Offset(paragraph.offset.dx + _width, paragraph.offset.dy + paragraph.height)), error.message);
             }
@@ -166,12 +168,22 @@ class SyntaxErrorIndicatorRenderObject extends RenderBox implements MouseTracker
     Paint fillPaint = Paint()..color = Colors.red.withAlpha(50)..style = PaintingStyle.fill;
     Paint borderPaint = Paint()..color = Colors.red..style = PaintingStyle.stroke;
 
-    for (ParserError error in _drawing.errors) {
-      CodeLineRenderParagraph paragraph = value.paragraphs[error.lineNumber - 1];
-      canvas.drawCircle(Offset(offset.dx + (_width / 2) + 2, offset.dy + paragraph.offset.dy + (paragraph.height / 2) + 2), _width / 4, fillPaint);
-      canvas.drawCircle(Offset(offset.dx + (_width / 2) + 2, offset.dy + paragraph.offset.dy + (paragraph.height / 2) + 2), _width / 4, borderPaint);
+    for (CodeLineRenderParagraph paragraph in value.paragraphs) {
+      ParserError? error = _drawing.errors.firstWhereOrNull((e) => e.lineNumber - 1 == paragraph.index);
+      if (error != null) {
+        canvas.drawCircle(Offset(offset.dx + (_width / 2) + 2, offset.dy + paragraph.offset.dy + (paragraph.height / 2) + 2), _width / 4, fillPaint);
+        canvas.drawCircle(Offset(offset.dx + (_width / 2) + 2, offset.dy + paragraph.offset.dy + (paragraph.height / 2) + 2), _width / 4, borderPaint);
+      }
     }
 
+/*    for (ParserError error in _drawing.errors) {
+      if (error.lineNumber < value.paragraphs.length) {
+        CodeLineRenderParagraph paragraph = value.paragraphs[error.lineNumber - 1];
+        canvas.drawCircle(Offset(offset.dx + (_width / 2) + 2, offset.dy + paragraph.offset.dy + (paragraph.height / 2) + 2), _width / 4, fillPaint);
+        canvas.drawCircle(Offset(offset.dx + (_width / 2) + 2, offset.dy + paragraph.offset.dy + (paragraph.height / 2) + 2), _width / 4, borderPaint);
+      }
+    }
+*/
     canvas.restore();
   }
 
