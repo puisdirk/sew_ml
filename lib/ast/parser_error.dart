@@ -9,8 +9,11 @@ class ParserError {
     required this.linePosition,
   });
 
+  bool get hasPosition => linePosition != -1;
+
   @override
   String toString() {
-    return '$message on line $lineNumber at position $linePosition';
+    String pos = hasPosition ? ' at position $linePosition' : '';
+    return '$message on line $lineNumber$pos';
   }
 }
