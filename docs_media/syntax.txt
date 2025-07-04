@@ -1,0 +1,58 @@
+
+Comments:
+
+# my comment
+
+Exec:
+
+exec aldrich_classic_shirt
+
+Part:
+
+part sleeve L_1,L_2,C_1,...
+
+Measurement:
+
+measurement M_chest-circumference 20cm
+
+Points:
+
+point P_1 20cm north of origin
+point P_1 M_chest-circumference left of origin
+point P_1 M_chest-circumference + 20 left of origin
+
+point P_1 20cm at angle 45deg from origin
+point P_1 20cm at angle 1rad from origin
+
+point P_1 on intersection of L_1 and L_2
+point P_1 on intersection of P_2/P_3 and P_4/P_5
+
+point P_1 in the middle of L_1
+point P_1 in the middle of P_2/P_3
+
+point P_1 fraction 1/4 on L_1
+point P_1 fraction 1/4 of L_1
+
+point P_1 as adjacent west of P_2 with hypotenuse 10cm from P_3
+
+Lines:
+
+line L_1 as P_1/P_2
+line L_1 from P_1 to P_2
+
+Curves:
+
+curve C_1 1/8 from P_1 to P_2
+curve C_1 neg 1/8 from P_1 to P_2
+curve C_1 1/8 from P_1 to P_2 apex 1/16
+
+
+Layout:
+
+layout sleeve
+layout back
+
+layout sleeve rotated twice flipped over x
+
+layout sleeve above back
+layout sleeve align left with back

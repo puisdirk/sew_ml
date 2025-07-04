@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:petitparser/petitparser.dart';
 import 'package:sew_ml/ast/comment.dart';
 import 'package:sew_ml/ast/parser_element.dart';
+import 'package:sew_ml/parser/error_messages.dart';
 
 /// Parses one line of sewMl
 class SewMLGrammarDefinition extends GrammarDefinition {
@@ -48,7 +49,7 @@ class SewMLGrammarDefinition extends GrammarDefinition {
 
   Parser partlabel() => (letter() | anyOf('_-') | digit()).plus().flatten().trim();
   
-  Parser<String> pointlabel([String message = 'Expected point name in form P_somename']) => 
+  Parser<String> pointlabel([String message = pointLabelError]) => 
     (
       string('origin') | 
       seq2(string('P_'), (letter() | anyOf('_-') | digit()).plus())
@@ -61,12 +62,22 @@ class SewMLGrammarDefinition extends GrammarDefinition {
     });
 
   // E.g. measurement M_scye-height 24cm
-  Parser measurement([String message = 'Expected measurement definition']) => 
-    (string('measurement').trim() & ref0(measurementLabel) & ref0(mmLength));
+  Parser measurement([String message = noMeasurementDefinitionError]) => 
+    (
+      string('measurement').trim() & 
+      (ref0(measurementLabel) | failure(measurementLabelError)) & 
+      (ref0(mmLength) | failure(noMeasurementDefinitionError)
+    )
+  );
 
   // E.g. point P_1 ...
-  Parser point([String message = 'Expected point definition']) => 
-    (string('point ').trim() & ref0(pointlabel) & ref0(coordinatedefinition));
+  Parser point([String message = noPointDefinitionError]) => 
+    (
+      string('point').trim() &
+      (ref0(pointlabel) | failure(pointLabelError)) & 
+      (ref0(coordinatedefinition) | failure(noPointDefinitionError)
+    )
+  );
 
   Parser coordinatedefinition([String message = 'Expected coordinate definition']) => 
     (
@@ -113,8 +124,12 @@ class SewMLGrammarDefinition extends GrammarDefinition {
     ref0(mmLength) & 
     ref0(coordinateOfPoint);
 
-  Parser<double> pDouble() => (digit().star() & (string('.') & digit().star()).optional()).flatten().map((d) {
-    return double.parse(d);
+  Parser pDouble() => (digit().star() & (string('.') & digit().star()).optional()).flatten().map((d) {
+    try {
+      return double.parse(d);
+    } catch (err) {
+      return failure('Not a valid number');
+    }
   });
 
   // TODO: inches
@@ -127,7 +142,7 @@ class SewMLGrammarDefinition extends GrammarDefinition {
     ref0(pointlabel);
 
   Parser mmLength() => 
-    ref0(pFormula) & 
+    (ref0(pFormula) | failure('Invalid formula')) & 
     (string('cm') | string('mm') | string('"')).optionalWith('mm').trim();
 
   Parser angle([String message = 'Expected an angle or named direction']) => 
@@ -156,11 +171,11 @@ class SewMLGrammarDefinition extends GrammarDefinition {
     return d;
   });
 
-  Parser pMeasurement() => ref0(measurementLabel).map((d) {
+  Parser pMeasurement([String message = 'Expected a measurement label starting with M_']) => ref0(measurementLabel).map((d) {
     return d;
   });
 
-  Parser measurementLabel([String message = 'Name expected in form M_some-name']) => seq2(string('M_'), (letter() | anyOf('_-') | digit()).plus() & string(' ')).flatten().trim().map((d) {
+  Parser measurementLabel([String message = measurementLabelError]) => seq2(string('M_'), (letter() | anyOf('_-') | digit()).plus()).flatten().trim().map((d) {
     return d;
   });
 

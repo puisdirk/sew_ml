@@ -178,6 +178,39 @@ class _DrawingViewState extends State<DrawingView> {
         children: [
           Column(
             children: [
+              const SizedBox(height: 10,),
+              Row(
+                children: [
+                  const SizedBox(width: 20,),
+                  OutlinedButton.icon(
+                    onPressed: () => setState(() {
+                      commands = commandsText.split('\n');
+                      _updateDrawing();
+                    }), 
+                    label: const Text('Parse'),
+                    icon: const Icon(Icons.play_circle_fill_rounded)
+                  ),
+                  const SizedBox(width: 20,),
+                  OutlinedButton(
+                    onPressed: () async {
+                      String? templateName = await _getTemplateName(context);
+                      if (templateName != null && templateName.isNotEmpty) {
+                        await TemplatesService().saveAsTemplate(templateName, commandsText);
+//                        setState(() => controller.text = 'exec $templateName' );
+                      }
+                    }, 
+                    child: const Text('Save as template')
+                  ),
+                  const SizedBox(width: 20,),
+                  OutlinedButton(
+                    onPressed: () async {
+                      await _showTemplatesDialog(context);
+                    },
+                    child: const Text('Manage Templates')
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10,),
               SizedBox(
                 width: screenSize.width / 3,
                 height: screenSize.height * 0.9,
@@ -221,37 +254,9 @@ class _DrawingViewState extends State<DrawingView> {
                   },
                 ),
               ),
-              Row(
-                children: [
-                  OutlinedButton(
-                    onPressed: () => setState(() {
-                      commands = commandsText.split('\n');
-                      _updateDrawing();
-                    }),
-                    child: const Text('Parse')
-                  ),
-                  const SizedBox(width: 20,),
-                  OutlinedButton(
-                    onPressed: () async {
-                      String? templateName = await _getTemplateName(context);
-                      if (templateName != null && templateName.isNotEmpty) {
-                        await TemplatesService().saveAsTemplate(templateName, commandsText);
-//                        setState(() => controller.text = 'exec $templateName' );
-                      }
-                    }, 
-                    child: const Text('Save as template')
-                  ),
-                  const SizedBox(width: 20,),
-                  OutlinedButton(
-                    onPressed: () async {
-                      await _showTemplatesDialog(context);
-                    },
-                    child: const Text('Manage Templates')
-                  ),
-                ],
-              ),
             ],
           ),
+          const SizedBox(width: 20,),
           Column(
             children: [
               InteractiveViewer(child: DrawingControl(drawing: _drawing)),

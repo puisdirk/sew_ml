@@ -14,6 +14,7 @@ import 'package:sew_ml/ast/point.dart';
 import 'package:sew_ml/ast/quadratic_bezier.dart';
 import 'package:sew_ml/ast/relative_placement.dart';
 import 'package:sew_ml/ast/sub_commands_group.dart';
+import 'package:sew_ml/parser/error_messages.dart';
 import 'package:sew_ml/parser/sew_m_l_grammar_definition.dart';
 import 'package:sew_ml/service/templates_service.dart';
 
@@ -24,7 +25,7 @@ import 'package:sew_ml/service/templates_service.dart';
 class SewMLParserDefinition extends SewMLGrammarDefinition {
 
   @override
-  Map<String, Parser<ParserElement>> getNamedParsers() {
+  Map<String, Parser> getNamedParsers() {
     return {
       'point': buildFrom(point().end()),
       'line': buildFrom(line().end()),
@@ -128,7 +129,11 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
 
   // We get [length, <cm/mm/">]. We return the length in mm
   @override
-  Parser<double> mmLength() => super.mmLength().map((result) {
+  Parser mmLength() => super.mmLength().map((result) {
+    if (result[0] is FailureParser) {
+      // TODO: does this work or should I throw an ArgumentError?
+      return failure('Expected a length');
+    }
     double multiplier = 1.0;
     if (result[1] == 'cm') {
       multiplier = 10.0;
@@ -193,7 +198,7 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
     return super.coordinateOfPoint().map((result) {
       String pointLabel = result[1];
       if (!_parserElements.containsKey(pointLabel)) {
-        throw ArgumentError('Could not find point $pointLabel');
+        throw ArgumentError('$noSuchPoint $pointLabel');
       }
       final p = _parserElements[pointLabel];
       if (p is! Point) {
@@ -206,9 +211,12 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
 
   // we get ['measurement', <label>, <mmlength>]
   @override
-  Parser<Measurement> measurement([String message = 'Expected measurement definition']) => super.measurement().map((result) {
+  Parser measurement([String message = noMeasurementDefinitionError]) => super.measurement().map((result) {
     String label = result[1];
     label = label.trim();
+    if (result[2] is FailureParser) {
+      throw ArgumentError(noMeasurementDefinitionError);
+    }
     double length = result[2];
 
     if (_measurements.containsKey(label)) {
@@ -226,7 +234,7 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
   Parser<Point> point([String message = 'Expected point definition']) => super.point().map((result) {
     String label = result[1];
     if (_parserElements.containsKey(label)) {
-      throw Exception('$label already exists');
+      throw ArgumentError('$label $alreadyExists');
     }
     Coordinate coord = result[2];
     coord.setPrecision(2);
@@ -244,12 +252,12 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
   Parser<Line> line() => super.line().map((result) {
     String label = result[1];
     if (_parserElements.containsKey(label)) {
-      throw Exception('$label already exists');
+      throw ArgumentError('$label $alreadyExists');
     }
 
     if (result[2][0] == 'as') {
       Line l = _findOrCreateLine(result[2][1]);
-      _parserElements.putIfAbsent(l.label, () => l);
+      _parserElements.putIfAbsent(label, () => l);
       return l;
     } else {
       final Coordinate coord1 = result[2][0];
@@ -261,7 +269,7 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
   });
 
   @override
-  Parser<double> pMeasurement() => super.pMeasurement().map((result) {
+  Parser<double> pMeasurement([String message = 'Expected a measurement label starting with M_']) => super.pMeasurement().map((result) {
     String measurementName = result;
     measurementName = measurementName.trim();
     if (!_measurements.containsKey(measurementName)) {
@@ -386,7 +394,7 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
       String endPointLabel = result[7];
 
       if (_parserElements.containsKey(curvelabel)) {
-        throw ArgumentError('$curvelabel already exists');
+        throw ArgumentError('$curvelabel $alreadyExists');
       }
 
       if (!_parserElements.containsKey(startPointLabel)) {
