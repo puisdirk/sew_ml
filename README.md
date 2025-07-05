@@ -18,11 +18,13 @@ line L_4 from P_3 to origin
 ```
 This illustrates how SewML works:
 
-- each line is a command
-- you can define the following objects: points, lines, curves, measurements, parts and layouts
+- each line is a command to create a new object
+- you can currently define the following objects: points, lines, curves, measurements, parts and layouts (examples follow below)
 - for each object, you specify a label (P_1, L_1, etc) so you can refer to it in subsequent commands
 
 ### Differences with tailoring books
+You can't simply copy-paste some text from a tailoring book. Some translation is in order.
+
 __Directions__
 \
 In classic tailoring books, you would get something like this:
@@ -59,3 +61,4 @@ SewML currently has a viewer and the language library rolled into one (we'll spl
 
 ### Future developments
 //TODO: slash-and-spread, folds, export to freesewing.org code, ...
+//TODO: smarter object creation, e.g. P_1.y, R_1.bottomleft, L_1.parallel, etc
