@@ -15,8 +15,8 @@ class AnimalsParser extends GrammarDefinition {
   Parser yellow() => string('yellow').trim();
 
   Parser animal() => lockIntent([
-    passOne(fox(), bufferStartsWith('red'), message: 'only foxes are red'),
-    passAny(fox() | bear(), [bufferStartsWith('red'), bufferStartsWith('brown')], message: 'if it is red or brown, it must be a bear or a fox'),
+    passOne(bufferStartsWith('red'), fox(), message: 'only foxes are red'),
+    passAny([bufferStartsWith('red'), bufferStartsWith('brown')], fox() | bear(), message: 'if it is red or brown, it must be a bear or a fox'),
   ], message: 'bears are brown while foxes can be red or brown');
 
 /*
@@ -32,11 +32,18 @@ class AnimalsParser extends GrammarDefinition {
   Parser fox() => string('fox').trim();
   Parser bear() => string('bear').trim();
 
-  Parser consumption() => 
+/*  Parser consumption() => 
     string('eats').trim() & 
     LockOnIntentParser([
-      IntentParser(honey() | rabbit(), [BufferContains('bear')], message: 'bears eat rabbits or honey'),
-      IntentParser(rabbit(), [BufferContains('fox')], message: 'foxes only eat rabbits'),
+      IntentParser([BufferContains('bear')], honey() | rabbit(), message: 'bears eat rabbits or honey'),
+      IntentParser([BufferContains('fox')], rabbit(), message: 'foxes only eat rabbits'),
+    ], message: 'bears and foxes eat rabbits, but only bears eat honey');
+*/
+  Parser consumption() =>
+    string('eats').trim() &
+    lockIntent([
+      passOne(bufferContains('bear'), honey() | rabbit(), message: 'bears eat rabbits or honey'),
+      passOne(bufferContains('fox'), rabbit(), message: 'foxes only eat rabbits'),
     ], message: 'bears and foxes eat rabbits, but only bears eat honey');
   Parser honey() => string('honey').trim();
   Parser rabbit() => string('rabbit').trim();

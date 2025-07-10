@@ -2,12 +2,12 @@
 import 'package:petitparser/core.dart';
 import 'package:sew_ml/parser/intent_parser/intent.dart';
 
-IntentParser passOne(Parser delegate, Intent intent, {String? message}) =>
-  IntentParser(delegate, [intent], passAll: true, message: message);
-IntentParser passAll(Parser delegate, List<Intent> intents, {String? message}) =>
-  IntentParser(delegate, intents, passAll: true, message: message);
-IntentParser passAny(Parser delegate, List<Intent> intents, {String? message}) =>
-  IntentParser(delegate, intents, passAll: false, message: message);
+IntentParser passOne(Intent intent, Parser delegate, {String? message}) =>
+  IntentParser([intent], delegate, passAll: true, message: message);
+IntentParser passAll(List<Intent> intents, Parser delegate, {String? message}) =>
+  IntentParser(intents, delegate, passAll: true, message: message);
+IntentParser passAny(List<Intent> intents, Parser delegate, {String? message}) =>
+  IntentParser(intents, delegate, passAll: false, message: message);
 /*
 extension IntentParserExtension<T, R> on IntentParser<T, R> {
   IntentParser<T, R> pass(Parser<T> delegate, Intent intent, {String? message}) =>
@@ -24,11 +24,11 @@ class IntentParser<T, R> extends Parser<R> implements Intent {
   final String? message;
   final bool passAll;
 
-  IntentParser(this.delegate, this.intents, {this.passAll = true, this.message})
+  IntentParser(this.intents, this.delegate, {this.passAll = true, this.message})
     : assert(intents.isNotEmpty, 'Intent parser intents cannot be empty');
 
   @override
-  Parser<R> copy() => IntentParser(delegate, intents);
+  Parser<R> copy() => IntentParser(intents, delegate);
 
   @override
   bool passes(Context context) {
