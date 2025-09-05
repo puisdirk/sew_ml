@@ -20,7 +20,7 @@ void main() {
     test('missing definition', () {
       Drawing drawing = Drawing.parse(['measurement M_test']);
       expect(drawing.hasError, true);
-      expect('$noMeasurementDefinitionError on line 1', drawing.errorsSummary);
+      expect('$expectedMeasurementDefinitionError on line 1', drawing.errorsSummary);
     });
   });
 
@@ -50,13 +50,13 @@ void main() {
         test('missing definition', () {
           Drawing drawing = Drawing.parse(['point P_test']);
           expect(drawing.hasError, true);
-          expect('$noPointDefinitionError on line 1 at position 12', drawing.errorsSummary);
+          expect('$expectedPointDefinitionError on line 1 at position 12', drawing.errorsSummary);
         });
 
         test('missing direction', () {
           Drawing drawing = Drawing.parse(['point P_test 20cm']);
           expect(drawing.hasError, true);
-          expect('$noPointDefinitionError on line 1 at position 13', drawing.errorsSummary);
+          expect('$expectedPointDefinitionError on line 1 at position 13', drawing.errorsSummary);
         });
 
         test('point missing label', (){
@@ -74,7 +74,7 @@ void main() {
         test('no such point', () {
           Drawing drawing = Drawing.parse(['point P_1 20cm north of P_2']);
           expect(drawing.hasError, true);
-          expect('$noSuchPoint P_2 on line 1', drawing.errorsSummary);
+          expect('$noSuchPointError P_2 on line 1', drawing.errorsSummary);
         });
 
         test('double label', (){
@@ -83,7 +83,7 @@ void main() {
             'point P_1 30cm north of origin'
           ]);
           expect(drawing.hasError, true);
-          expect('P_1 $alreadyExists on line 2', drawing.errorsSummary);
+          expect('P_1 $alreadyExistsError on line 2', drawing.errorsSummary);
         });
       });
 

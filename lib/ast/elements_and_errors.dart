@@ -10,7 +10,9 @@ class ElementsAndErrors {
   List<ParserError> get errors => List.from(_errors);
 
   void addElement(ParserElement element) {
-    _elements.add(element);
+    if(!_elements.contains(element)) {
+      _elements.add(element);
+    }
   }
 
   void addAllElements(Iterable<ParserElement> newElements) {
