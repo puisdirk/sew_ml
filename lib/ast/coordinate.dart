@@ -25,6 +25,6 @@ class Coordinate {
     identical(this, other) ||
     other is Coordinate &&
       runtimeType == other.runtimeType &&
-      _x == other._x &&
-      _y == other._y;
+      double.parse(_x.toStringAsFixed(3)) == double.parse(other._x.toStringAsFixed(3)) &&
+      double.parse(_y.toStringAsFixed(3)) == double.parse(other._y.toStringAsFixed(3));
 }

@@ -38,14 +38,13 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
     };
   }
 
-  final Map<String, Measurement> _measurements;
   int _currentLineNumber = 0;
 
   // The points, lines and curves thus far
   final Map<String, ParserElement> _parserElements = {
     'origin': Point(label: 'origin', coordinate: Coordinate(0.0, 0.0))};
 
-  SewMLParserDefinition([Map<String, Measurement>? measurements]) : _measurements = measurements == null ? {} : Map.from(measurements), super();
+  SewMLParserDefinition();
 
   // We get a list of ParserElement
   @override
@@ -198,7 +197,7 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
     return super.coordinateOfPoint().map((result) {
       String pointLabel = result[1];
       if (!_parserElements.containsKey(pointLabel)) {
-        throw ArgumentError('$noSuchPoint $pointLabel');
+        throw ArgumentError('$noSuchPointError $pointLabel');
       }
       final p = _parserElements[pointLabel];
       if (p is! Point) {
@@ -211,21 +210,25 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
 
   // we get ['measurement', <label>, <mmlength>]
   @override
-  Parser measurement([String message = noMeasurementDefinitionError]) => super.measurement().map((result) {
+  Parser measurement() => super.measurement().map((result) {
     String label = result[1];
     label = label.trim();
     if (result[2] is FailureParser) {
-      throw ArgumentError(noMeasurementDefinitionError);
+      throw ArgumentError(expectedMeasurementDefinitionError);
     }
     double length = result[2];
 
-    if (_measurements.containsKey(label)) {
-      // return the existing one
-      return _measurements[label]!; 
+    if (_parserElements.containsKey(label)) {
+      if (_parserElements[label] is Measurement) {
+        // return the existing one
+        return _parserElements[label]!;
+      } else {
+        throw ArgumentError('An element with label $label already exists');
+      }
     }
 
     Measurement m = Measurement(label: label, valueInMMorRad: length);
-    _measurements.putIfAbsent(label, ()=> m);
+    _parserElements[label] = m;
     return m;
   });
 
@@ -234,7 +237,7 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
   Parser<Point> point([String message = 'Expected point definition']) => super.point().map((result) {
     String label = result[1];
     if (_parserElements.containsKey(label)) {
-      throw ArgumentError('$label $alreadyExists');
+      throw ArgumentError('$label $alreadyExistsError');
     }
     Coordinate coord = result[2];
     coord.setPrecision(2);
@@ -252,11 +255,11 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
   Parser<Line> line() => super.line().map((result) {
     String label = result[1];
     if (_parserElements.containsKey(label)) {
-      throw ArgumentError('$label $alreadyExists');
+      throw ArgumentError('$label $alreadyExistsError');
     }
 
     if (result[2][0] == 'as') {
-      Line l = _findOrCreateLine(result[2][1]);
+      Line l = _findOrCreateLine(result[2][1], useLabel: label);
       _parserElements.putIfAbsent(label, () => l);
       return l;
     } else {
@@ -269,14 +272,17 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
   });
 
   @override
-  Parser<double> pMeasurement([String message = 'Expected a measurement label starting with M_']) => super.pMeasurement().map((result) {
+  Parser<double> pMeasurement() => super.pMeasurement().map((result) {
     String measurementName = result;
     measurementName = measurementName.trim();
-    if (!_measurements.containsKey(measurementName)) {
-      throw Exception('Measurement $measurementName not found');
+    if (!_parserElements.containsKey(measurementName)) {
+      throw ArgumentError('$noSuchMeasurement $measurementName');
     }
 
-    return _measurements[measurementName]!.valueInMMorRad;
+    if (_parserElements[measurementName] is! Measurement) {
+      throw ArgumentError('$measurementName is not a Measurement');
+    }
+    return (_parserElements[measurementName]! as Measurement).valueInMMorRad;
   });
 
   // E.g. point P_2 on intersection of L_1 and origin/P_1
@@ -298,7 +304,7 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
 
   // Find an existing line or create a temp line from point names
   // linelabel: label of an exising line in form L_somename (string), or a list of startpointlabel, '/', endpointlabel 
-  Line _findOrCreateLine(dynamic linelabel) {
+  Line _findOrCreateLine(dynamic linelabel, {String? useLabel}) {
 
     final Line line;
 
@@ -332,7 +338,7 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
         throw ArgumentError('$endPointLabel is not a Point');
       }
 
-      line = Line(label: 'temp', startPoint: startPoint.coordinate, endPoint: endPoint.coordinate);
+      line = Line(label: useLabel ?? 'temp', startPoint: startPoint.coordinate, endPoint: endPoint.coordinate);
     }
 
     return line;
@@ -389,12 +395,15 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
     super.curveThroughTwoPoints().map((result) {
       String curvelabel = result[1];
       String direction = result[2]; // 'pos' or 'neg'
+      if (result[3] is FailureParser) {
+        throw ArgumentError('$expectedFractionError after the curve label (${result[3].message})');
+      }
       double intensityfraction = result[3];
       String startPointLabel = result[5];
       String endPointLabel = result[7];
 
       if (_parserElements.containsKey(curvelabel)) {
-        throw ArgumentError('$curvelabel $alreadyExists');
+        throw ArgumentError('$curvelabel $alreadyExistsError');
       }
 
       if (!_parserElements.containsKey(startPointLabel)) {

@@ -22,7 +22,7 @@ point P_1 M_chest-circumference left of origin
 point P_1 M_chest-circumference + 20 left of origin
 
 point P_1 20cm at angle 45deg from origin
-point P_1 20cm at angle 1rad from origin
+point P_1 20cm at angle 3.14rad from origin
 
 point P_1 on intersection of L_1 and L_2
 point P_1 on intersection of P_2/P_3 and P_4/P_5
