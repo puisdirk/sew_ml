@@ -14,6 +14,7 @@ import 'package:sew_ml/ast/point.dart';
 import 'package:sew_ml/ast/quadratic_bezier.dart';
 import 'package:sew_ml/ast/relative_placement.dart';
 import 'package:sew_ml/ast/sub_commands_group.dart';
+import 'package:sew_ml/controls/syntax_error_indicator_render_object.dart';
 import 'package:sew_ml/parser/error_messages.dart';
 import 'package:sew_ml/parser/sew_m_l_grammar_definition.dart';
 import 'package:sew_ml/service/templates_service.dart';
@@ -498,7 +499,9 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
             throw ArgumentError('Unknown layout placement constraint $flipTypeOrPlacement');
           }
           layout.addConstraint(RelativePlacement(targetPartLabel: partLabel, sourcePartLabel: sourcePartName, constraint: constraint));
-        } else {
+        }
+
+        if (!layout.placements.any((p) => p.partName == partLabel)) {
           Flip flip = Flip.none;
           if (flipTypeOrPlacement == 'flipped over x') {
             flip = Flip.x;

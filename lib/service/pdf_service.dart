@@ -45,8 +45,8 @@ class PdfService {
     int numVertPages = (svgInfo.height / pageHeightMM).ceil();
 
     // Take page overlap border into account
-    double overlappedCompleteWidth = svgInfo.width + (numHorPages * (pageOverlapBorderMM * 2.0));
-    double overlappedCompleteHeight = svgInfo.height + (numVertPages * (pageOverlapBorderMM * 2.0));
+    double overlappedCompleteWidth = svgInfo.width + ((numHorPages - 1) * (pageOverlapBorderMM * 2.0));
+    double overlappedCompleteHeight = svgInfo.height + ((numVertPages - 1) * (pageOverlapBorderMM * 2.0));
     numHorPages = (overlappedCompleteWidth / pageWidthMM).ceil();
     numVertPages = (overlappedCompleteHeight / pageHeightMM).ceil();
 

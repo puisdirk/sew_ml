@@ -157,7 +157,7 @@ class SewMLGrammarDefinition extends GrammarDefinition {
     string('line').trim() & 
     (ref0(linelabel) | failure(lineLabelError)) & 
     [
-      (string('as').trim() & ref0(templinelabel)) | 
+      (string('as').trim() & ref0(templinelabel)), 
       (ref0(coordinateOfPoint) & ref0(coordinateOfPoint))
     ].toChoiceParser(failureJoiner: selectFarthest);
 
@@ -306,7 +306,7 @@ class SewMLGrammarDefinition extends GrammarDefinition {
     ref0(pointlabel) &
     string('to').trim() &
     ref0(pointlabel) &
-    (string('apex').trim() & ref0(fraction)).optional();
+    (string('apex').trim() & (ref0(fraction) | failure(expectedFractionError))).optional();
 
 
   Parser<String> curvelabel([String message = curveLabelError]) => 
@@ -316,10 +316,10 @@ class SewMLGrammarDefinition extends GrammarDefinition {
 
   Parser layout() =>
     string('layout').trim() &
-    (ref0(relativeConstraint) | ref0(partPlacement));
+    [ref0(relativeConstraint), ref0(partPlacement)].toChoiceParser(failureJoiner: selectFarthest);
 
   Parser relativeConstraint() =>
-    ref0(partlabel) & 
+    (ref0(partlabel) | failure('Expected a part label')) & 
     (string('below') | string('above') | 
      string('right of') | string('to the right of') | 
      string('left of') | string('to the left of') |
@@ -329,7 +329,7 @@ class SewMLGrammarDefinition extends GrammarDefinition {
 
   // E.g. Layout L_1 Sleeve flipped over x rotated 90deg
   Parser partPlacement() =>
-    ref0(partlabel) &
+    (ref0(partlabel) | failure('Expected a part label')) & 
     (string('flipped over xy') | string('flipped over x') | string('flipped over y')).trim().optionalWith('') &
     (string('rotated once') | string('rotated twice') | string('rotated thrice')).optional();
 
