@@ -104,8 +104,8 @@ class LayoutPainter extends CustomPainter {
       int numVertPages = (completeBounds.height / pageHeightMM).ceil();
 
       // Account for page overlap border
-      double overlappedCompleteWidth = completeBounds.width + (numHorPages * (PdfService.pageOverlapBorderMM * 2.0));
-      double overlappedCompleteHeight = completeBounds.height + (numVertPages * (PdfService.pageOverlapBorderMM * 2.0));
+      double overlappedCompleteWidth = completeBounds.width + ((numHorPages - 1) * (PdfService.pageOverlapBorderMM * 2.0));
+      double overlappedCompleteHeight = completeBounds.height + ((numVertPages - 1 ) * (PdfService.pageOverlapBorderMM * 2.0));
 
       numHorPages = (overlappedCompleteWidth / pageWidthMM).ceil();
       numVertPages = (overlappedCompleteHeight / pageHeightMM).ceil();

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_dir/open_dir.dart';
 import 'package:re_editor/re_editor.dart';
 import 'package:sew_ml/service/templates_service.dart';
 
@@ -125,7 +126,7 @@ class _ManageTemplatesViewState extends State<ManageTemplatesView> {
               builder: (context, snapshot) => Text(snapshot.data ?? '')
             ),
             const SizedBox(width: 20,),
-            TextButton(
+            /*TextButton(
               onPressed: () async {
                 await TemplatesService().changeTemplateDirectory();
                 setState(() {
@@ -133,6 +134,13 @@ class _ManageTemplatesViewState extends State<ManageTemplatesView> {
                 });
               }, 
               child: const Text('Change')
+            )*/
+            IconButton(
+              onPressed: () async {
+                final opendirPlugin = OpenDir();
+                await opendirPlugin.openNativeDir(path: await TemplatesService().currentDirectory);
+              },
+              icon: const Icon(Icons.open_in_new),
             )
           ],
         )

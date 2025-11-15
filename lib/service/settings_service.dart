@@ -28,8 +28,8 @@ class SettingsService {
 
   String _createDefaultSettings() => 
     '''
-${SewMLSetting.templatesDirectory.name}=$_appDirectoryPath${Platform.pathSeparator}templates\n
-${SewMLSetting.printPageSize.name}=${PrintPageSize.a4.name}\n
+${SewMLSetting.templatesDirectory.name}=$_appDirectoryPath${Platform.pathSeparator}templates
+${SewMLSetting.printPageSize.name}=${PrintPageSize.a4.name}
 ${SewMLSetting.printPageOrientation.name}=${PrintPageOrientation.portrait.name}
 ''';
 
@@ -37,6 +37,7 @@ ${SewMLSetting.printPageOrientation.name}=${PrintPageOrientation.portrait.name}
     await _initAppDirectoryPath();
 
     File settingsFile = File('$_appDirectoryPath/sew_ml_settings.txt');
+
 /*
     if (settingsFile.existsSync()) {
       settingsFile.deleteSync();

@@ -354,9 +354,101 @@ void main() {
           'curve C_1 from origin to P_1'
         ]);
         expect(drawing.hasError, true);
-        // TODO: find a way to improve this
         expect(drawing.errorsSummary, '$expectedFractionError after the curve label (Not a valid formula) on line 2');
       });
+
+      test('missing apex', () {
+        final Drawing drawing = Drawing.parse([
+          'point P_1 20cm east of origin',
+          'curve C_1 1/4 from origin to P_1 apex'
+        ]);
+        expect(drawing.hasError, true);
+        // TODO: find a way to get 'expected a fraction'
+        expect(drawing.errorsSummary, 'end of input expected on line 2 at position 33');
+      });
+    });
+  });
+
+  group('Layouts', () {
+    group('success', (){
+      test('partplacement', () {
+        final Drawing drawing = Drawing.parse([
+          'layout P_1'
+        ]);
+
+        expect(drawing.hasError, false);
+        expect(drawing.hasLayout, true);
+        expect(drawing.layout.placements.length, 1);
+      });
+
+      test('partplacement flipping', () {
+        final Drawing drawing = Drawing.parse([
+          'point P_1 20cm east of origin',
+          'part p P_1',
+          'layout p flipped over xy'
+        ]);
+
+        expect(drawing.hasError, false);
+        expect(drawing.hasLayout, true);
+        expect(drawing.layout.placements.length, 1);
+      });
+
+      test('partplacement rotating', () {
+        final Drawing drawing = Drawing.parse([
+          'point P_1 20cm east of origin',
+          'part p P_1',
+          'layout p rotated once'
+        ]);
+
+        expect(drawing.hasError, false);
+        expect(drawing.hasLayout, true);
+        expect(drawing.layout.placements.length, 1);
+      });
+
+      test('partplacement flipping rotating', () {
+        final Drawing drawing = Drawing.parse([
+          'point P_1 20cm east of origin',
+          'part p P_1',
+          'layout p flipped over x rotated once'
+        ]);
+
+        expect(drawing.hasError, false);
+        expect(drawing.hasLayout, true);
+        expect(drawing.layout.placements.length, 1);
+      });
+
+      test('relativeConstraint', () {
+        final Drawing drawing = Drawing.parse([
+          'point P_1 20cm east of origin',
+          'point P_2 10cm north of origin',
+          'part p P_1',
+          'part q P_2',
+          'layout p',
+          'layout q left of p',
+          'layout q align top with p'
+        ]);
+
+        expect(drawing.hasError, false);
+        expect(drawing.hasLayout, true);
+        expect(drawing.layout.placements.length, 2);
+        expect(drawing.layout.relativePlacements.length, 2);
+        expect(drawing.getLayoutPaths().entries.length, 2);
+      });
+    });
+
+    group('errors', () {
+
+      test('partplacement flipping must come before rotating', () {
+        final Drawing drawing = Drawing.parse([
+          'point P_1 20cm east of origin',
+          'part p P_1',
+          'layout p rotated once flipped over x'
+        ]);
+
+        expect(drawing.hasError, true);
+        expect(drawing.errorsSummary, 'end of input expected on line 3 at position 21');
+      });
+
     });
   });
 }

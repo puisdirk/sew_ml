@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:sew_ml/ast/samples/aldrich_classic_bodice.dart';
 import 'package:sew_ml/ast/sub_commands_group.dart';
 import 'package:sew_ml/service/settings_service.dart';
 
@@ -20,6 +21,9 @@ class TemplatesService {
     Directory templatesDirectory = Directory(_templatesDirectoryPath!);
     if (!templatesDirectory.existsSync()) {
       await templatesDirectory.create();
+
+      await _createDefaultTemplates();
+
       directoryDirty = true;
     }
 
@@ -37,6 +41,14 @@ class TemplatesService {
         }
       }
       directoryDirty = false;
+    }
+  }
+
+  Future<void> _createDefaultTemplates() async {
+    final AldrichClassicBodice bodice = AldrichClassicBodice();
+    File bodiceFile = File('$_templatesDirectoryPath/${bodice.label}.smlt');
+    if (!bodiceFile.existsSync()) {
+      bodiceFile.writeAsStringSync(bodice.subCommands.join('\n'));
     }
   }
 
