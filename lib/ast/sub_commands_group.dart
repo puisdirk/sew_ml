@@ -9,6 +9,18 @@ class SubCommandsGroup extends ParserElement {
     required this.subCommands,
   });
 
+  static SubCommandsGroup fromJson(Map<String, dynamic> json) {
+    List<String> commands = (json['subcommands'] as List).toList().map((e) => e as String).toList();
+    return SubCommandsGroup(label: json['label'] as String, subCommands: commands);
+  }
+
+  Map<String, Object> toJson() {
+    return {
+      'label': label,
+      'subcommands': subCommands
+    };
+  }
+
   @override
   void offset(double x, double y) {
     // nothing to do

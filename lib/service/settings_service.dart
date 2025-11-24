@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:sew_ml/service/page_layout.dart';
+import 'package:simple_platform/simple_platform.dart';
 
 enum SewMLSetting {
   templatesDirectory,
@@ -20,7 +21,7 @@ class SettingsService {
   final Map<String, String> _settings = {};
 
   Future<void> _initAppDirectoryPath() async {
-    if (_appDirectoryPath == null) {
+    if (_appDirectoryPath == null && !AppPlatform.isWeb) {
       Directory dir = await getApplicationDocumentsDirectory();
       _appDirectoryPath = dir.path;
     }
@@ -36,27 +37,33 @@ ${SewMLSetting.printPageOrientation.name}=${PrintPageOrientation.portrait.name}
   Future<void> _initSettings() async {
     await _initAppDirectoryPath();
 
-    File settingsFile = File('$_appDirectoryPath/sew_ml_settings.txt');
+    if (AppPlatform.isWeb) {
+      _settings[SewMLSetting.templatesDirectory.name] = '';
+      _settings[SewMLSetting.printPageSize.name] = PrintPageSize.a4.name;
+      _settings[SewMLSetting.printPageOrientation.name] = PrintPageOrientation.portrait.name;
+    } else {
+      File settingsFile = File('$_appDirectoryPath/sew_ml_settings.txt');
 
-/*
-    if (settingsFile.existsSync()) {
-      settingsFile.deleteSync();
-    }
-*/
-    if (!settingsFile.existsSync()) {
-      String defaults = _createDefaultSettings();
-      settingsFile.writeAsStringSync(defaults);
-    }
+  /*
+      if (settingsFile.existsSync()) {
+        settingsFile.deleteSync();
+      }
+  */
+      if (!settingsFile.existsSync()) {
+        String defaults = _createDefaultSettings();
+        settingsFile.writeAsStringSync(defaults);
+      }
 
-    List<String> settingsLines = settingsFile.readAsLinesSync();
+      List<String> settingsLines = settingsFile.readAsLinesSync();
 
-    for (String settingsLine in settingsLines) {
-      if (settingsLine.isNotEmpty) {
-        List<String> settingPair = settingsLine.split('=');
-        if (settingPair.length != 2) {
-          throw Exception('Settings file contains line $settingsLine with invalid format');
+      for (String settingsLine in settingsLines) {
+        if (settingsLine.isNotEmpty) {
+          List<String> settingPair = settingsLine.split('=');
+          if (settingPair.length != 2) {
+            throw Exception('Settings file contains line $settingsLine with invalid format');
+          }
+          _settings[settingPair[0]] = settingPair[1];
         }
-        _settings[settingPair[0]] = settingPair[1];
       }
     }
   }
@@ -72,10 +79,14 @@ ${SewMLSetting.printPageOrientation.name}=${PrintPageOrientation.portrait.name}
 
   Future<void> writeSetting(SewMLSetting setting, String value) async {
     _settings[setting.name] = value;
-    await _writeSettings();
+    if (!AppPlatform.isWeb) {
+      await _writeSettingsToFile();
+    } else {
+      // write to something??
+    }
   }
 
-  Future<void> _writeSettings() async {
+  Future<void> _writeSettingsToFile() async {
     List<String> settingsLines = [];
 
     for (MapEntry<String, String> entry in _settings.entries) {

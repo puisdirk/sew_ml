@@ -126,7 +126,7 @@ class SvgService {
       }
     } else {
       // No layout found
-      childSvg += '<g fill="red"><text x="25" y="25" font-family="Verdana" font-size="64">Error: no layout defined</text></g>';
+      childSvg += '<g fill="red"><text x="25" y="25" font-family="Verdana">Error: no layout defined</text>';
     }
 
     childSvg += '</g>'; // Close the translation group that puts the whole drawing at 0,0
