@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:pdf/pdf.dart';
@@ -13,7 +14,7 @@ class PdfService {
   static const double pageOverlapBorderMM = 20.0;
   static const double pageOverlapBorderCM = pageOverlapBorderMM / 10.0;
 
-  static Future<void> saveAsPdf(
+  static Future<Uint8List> getPdfBytes(    
     Drawing drawing, 
     {
       String layoutName = '', 
@@ -21,20 +22,18 @@ class PdfService {
       double pageHeightMM = 297, 
     }
   ) async {
+    final pdf = await _getMultipagePdfDocument(drawing, layoutName: layoutName, pageWidthMM: pageWidthMM, pageHeightMM: pageHeightMM);
+    return await pdf.save();
+  }
 
-    String initialFileName = layoutName;
-    if (initialFileName.isEmpty) {
-      initialFileName = 'layout';
+  static Future<pw.Document> _getMultipagePdfDocument(
+    Drawing drawing, 
+    {
+      String layoutName = '', 
+      double pageWidthMM = 210, 
+      double pageHeightMM = 297, 
     }
-
-    String? outputFile = await FilePicker.platform.saveFile(
-      dialogTitle: 'Please select an output file:',
-      fileName: '$initialFileName.pdf',
-    );
-
-    if (outputFile == null) {
-      return;
-    }
+  ) async {
 
     SvgInfo svgInfo = SvgService.createSVG(drawing);
 
@@ -143,6 +142,34 @@ class PdfService {
       pageOffset = pageOffset.translate(-pageOffset.dx, pageHeightMM - pageOverlapBorderMM);
     }
 
+    return pdf;
+  }
+
+  static Future<void> saveAsPdf(
+    Drawing drawing, 
+    {
+      String layoutName = '', 
+      double pageWidthMM = 210, 
+      double pageHeightMM = 297, 
+    }
+  ) async {
+
+    String initialFileName = layoutName;
+    if (initialFileName.isEmpty) {
+      initialFileName = 'layout';
+    }
+
+    String? outputFile = await FilePicker.platform.saveFile(
+      dialogTitle: 'Please select an output file:',
+      fileName: '$initialFileName.pdf',
+    );
+
+    if (outputFile == null) {
+      return;
+    }
+
+    final pdf = await _getMultipagePdfDocument(drawing, layoutName: layoutName, pageHeightMM: pageWidthMM, pageWidthMM: pageHeightMM);
+    
     final file = File(outputFile);
     await file.writeAsBytes(await pdf.save());
 

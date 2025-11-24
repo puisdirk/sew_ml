@@ -6,6 +6,7 @@ import 'package:sew_ml/controls/drawing_control.dart';
 import 'package:sew_ml/controls/layout_control.dart';
 import 'package:sew_ml/controls/manage_templates_view.dart';
 import 'package:sew_ml/controls/print_settings_view.dart';
+import 'package:sew_ml/controls/save_from_web_view.dart';
 import 'package:sew_ml/controls/syntax_error_indicator.dart';
 import 'package:sew_ml/controls/valid_line_indicator.dart';
 import 'package:sew_ml/service/page_layout.dart';
@@ -13,6 +14,7 @@ import 'package:sew_ml/service/page_layout_service.dart';
 import 'package:sew_ml/service/pdf_service.dart';
 import 'package:sew_ml/service/svg_service.dart';
 import 'package:sew_ml/service/templates_service.dart';
+import 'package:simple_platform/simple_platform.dart';
 
 class DrawingView extends StatefulWidget {
   const DrawingView({
@@ -110,6 +112,7 @@ class _DrawingViewState extends State<DrawingView> {
   }
 
   Future<void> _showTemplatesDialog(BuildContext context) async {
+    TemplatesService().initTemplatesDirectoryPath();
     return showAdaptiveDialog(
       context: context, 
       builder: (context) {
@@ -122,6 +125,30 @@ class _DrawingViewState extends State<DrawingView> {
               child: const Text('Close'),
             )
           ],
+        );
+      }
+    );
+  }
+
+  Future<void> _showSaveAsPdfDialog(BuildContext context) async {
+    return showAdaptiveDialog(
+      context: context, 
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Save as Pdf'),
+          content: SaveFromWebView(drawing: _drawing, asSvg: false,),
+        );
+      }
+    );
+  }
+
+  Future<void> _showSaveAsSvgDialog(BuildContext context) async {
+    return showAdaptiveDialog(
+      context: context, 
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Save as SVG'),
+          content: SaveFromWebView(drawing: _drawing, asSvg: true,),
         );
       }
     );
@@ -266,7 +293,11 @@ class _DrawingViewState extends State<DrawingView> {
                   OutlinedButton(
                     onPressed: () async {
                       _updateDrawing();
-                      await SvgService.saveAsSvg(_drawing);
+                      if (!AppPlatform.isWeb) {
+                        await SvgService.saveAsSvg(_drawing);
+                      } else if (context.mounted) {
+                        await _showSaveAsSvgDialog(context);
+                      }
                     },
                     child: const Text('Export to SVG'),
                   ),
@@ -276,7 +307,11 @@ class _DrawingViewState extends State<DrawingView> {
                       PageLayout layout = await PageLayoutService().getPageLayout();
                       Offset pageSizeMM = PageLayoutService().getDimensionsForLayout(layout);
                       _updateDrawing();
-                      await PdfService.saveAsPdf(_drawing, pageWidthMM: pageSizeMM.dx, pageHeightMM: pageSizeMM.dy);
+                      if (!AppPlatform.isWeb) {
+                        await PdfService.saveAsPdf(_drawing, pageWidthMM: pageSizeMM.dx, pageHeightMM: pageSizeMM.dy);
+                      } else if (context.mounted) {
+                        await _showSaveAsPdfDialog(context);
+                      }
                     },
                     child: const Text('Export to PDF'),
                   ),
