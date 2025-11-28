@@ -35,6 +35,7 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
       'measurement': buildFrom(measurement().end()),
       'exec': buildFrom(exec().end()),
       'layout': buildFrom(layout().end()),
+      '#': buildFrom(comment().end()),
       'unknown': buildFrom(command().end()),
     };
   }

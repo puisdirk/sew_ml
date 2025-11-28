@@ -3,8 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:sew_ml/ast/samples/aldrich_classic_bodice.dart';
-import 'package:sew_ml/ast/samples/aldrich_classic_sleeve.dart';
+import 'package:sew_ml/ast/samples/aldrich_classic_shirt.dart';
+import 'package:sew_ml/ast/samples/aldrich_classic_shirt_sleeve.dart';
 import 'package:sew_ml/ast/sub_commands_group.dart';
 import 'package:sew_ml/service/settings_service.dart';
 import 'package:simple_platform/simple_platform.dart';
@@ -21,7 +21,7 @@ class TemplatesService {
   final Map<String, SubCommandsGroup> _templates = {};
   bool directoryDirty = true;
 
-  Future<void> initTemplatesDirectoryPath() async {
+  Future<void> initTemplates() async {
 
     if (AppPlatform.isWeb) {
       if (_templates.isEmpty) {
@@ -82,7 +82,7 @@ class TemplatesService {
   }
 
   Future<void> _createDefaultTemplates() async {
-    final AldrichClassicBodice bodice = AldrichClassicBodice();
+    final AldrichClassicShirt bodice = AldrichClassicShirt();
     if (!_templates.containsKey(bodice.label)) {
       _templates[bodice.label] = bodice;
       if (AppPlatform.isWeb) {
@@ -95,7 +95,7 @@ class TemplatesService {
       }
     }
 
-    final AldrichClassicSleeve sleeve = AldrichClassicSleeve();
+    final AldrichClassicShirtSleeve sleeve = AldrichClassicShirtSleeve();
     if (!_templates.containsKey(sleeve.label)) {
       _templates[sleeve.label] = sleeve;
       if (AppPlatform.isWeb) {
@@ -131,12 +131,12 @@ class TemplatesService {
       await SettingsService().writeSetting(SewMLSetting.templatesDirectory, newPath);
       _templatesDirectoryPath = newPath;
       directoryDirty = true;
-      await initTemplatesDirectoryPath();
+      await initTemplates();
     }
   }
 
   Future<void> saveAsTemplate(String templateName, String commandsText) async {
-    await initTemplatesDirectoryPath();
+    await initTemplates();
 
     _templates[templateName] = SubCommandsGroup(label: templateName, subCommands: commandsText.split('\n'));
 
@@ -157,7 +157,7 @@ class TemplatesService {
   Future<String> get currentDirectory async => _templatesDirectoryPath ?? await SettingsService().readSetting(SewMLSetting.templatesDirectory);
   
   Future<void> deleteTemplate(String templateName) async {
-    await initTemplatesDirectoryPath();
+    await initTemplates();
 
     _templates.remove(templateName);
 

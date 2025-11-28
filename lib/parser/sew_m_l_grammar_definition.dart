@@ -38,7 +38,7 @@ class SewMLGrammarDefinition extends GrammarDefinition {
         failure('Expected a measurement, point, line, curve, part or layout definition'
       )].toChoiceParser(failureJoiner: selectFarthest)).cast();
 
-  Parser<Comment> comment() => (string('#') & (word() | whitespace() | anyOf('_-')).plus()).flatten().map((res) => Comment(comment: res));
+  Parser<Comment> comment() => (string('#') & (any()).plus()).flatten().map((res) => Comment(comment: res));
 
   Parser part([String message = 'Expected part definition']) =>
     string('part').trim() &
