@@ -112,7 +112,7 @@ class _DrawingViewState extends State<DrawingView> {
   }
 
   Future<void> _showTemplatesDialog(BuildContext context) async {
-    TemplatesService().initTemplatesDirectoryPath();
+    TemplatesService().initTemplates();
     return showAdaptiveDialog(
       context: context, 
       builder: (context) {
