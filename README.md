@@ -19,7 +19,7 @@ line L_4 from P_3 to origin
 This illustrates how SewML works:
 
 - each line is a command to create a new object
-- you can currently define the following objects: points, lines, curves, measurements, parts and layouts (examples follow below)
+- you can currently define the following objects: points, lines, curves, measuremtents, parts and layouts (examples follow below)
 - for each object, you specify a label (P_1, L_1, etc) so you can refer to it in subsequent commands
 
 ---

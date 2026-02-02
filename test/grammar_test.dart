@@ -371,69 +371,119 @@ void main() {
 
   group('Layouts', () {
     group('success', (){
-      test('partplacement', () {
-        final Drawing drawing = Drawing.parse([
-          'layout P_1'
-        ]);
 
-        expect(drawing.hasError, false);
-        expect(drawing.hasLayout, true);
-        expect(drawing.layout.placements.length, 1);
+      group('part placement', (){
+        test('partplacement', () {
+          final Drawing drawing = Drawing.parse([
+            'point P_1 20cm east of origin',
+            'part p P_1',
+            'layout part p'
+          ]);
+
+          expect(drawing.hasError, false);
+          expect(drawing.hasLayout, true);
+          expect(drawing.layout.placements.length, 1);
+        });
+
+        test('partplacement flipping', () {
+          final Drawing drawing = Drawing.parse([
+            'point P_1 20cm east of origin',
+            'part p P_1',
+            'layout part p flipped over xy'
+          ]);
+
+          expect(drawing.hasError, false);
+          expect(drawing.hasLayout, true);
+          expect(drawing.layout.placements.length, 1);
+        });
+
+        test('partplacement rotating', () {
+          final Drawing drawing = Drawing.parse([
+            'point P_1 20cm east of origin',
+            'part p P_1',
+            'layout part p rotated once'
+          ]);
+
+          expect(drawing.hasError, false);
+          expect(drawing.hasLayout, true);
+          expect(drawing.layout.placements.length, 1);
+        });
+
+        test('partplacement flipping rotating', () {
+          final Drawing drawing = Drawing.parse([
+            'point P_1 20cm east of origin',
+            'part p P_1',
+            'layout part p flipped over x rotated once'
+          ]);
+
+          expect(drawing.hasError, false);
+          expect(drawing.hasLayout, true);
+          expect(drawing.layout.placements.length, 1);
+        });
+
       });
 
-      test('partplacement flipping', () {
-        final Drawing drawing = Drawing.parse([
-          'point P_1 20cm east of origin',
-          'part p P_1',
-          'layout p flipped over xy'
-        ]);
+      group('move', (){
+        test('relativeConstraint', () {
+          final Drawing drawing = Drawing.parse([
+            'point P_1 20cm east of origin',
+            'point P_2 10cm north of origin',
+            'part p P_1',
+            'part q P_2',
+            'layout part p',
+            'layout part q',
+            'layout move q left of p',
+            'layout move q align top with p'
+          ]);
 
-        expect(drawing.hasError, false);
-        expect(drawing.hasLayout, true);
-        expect(drawing.layout.placements.length, 1);
+          expect(drawing.hasError, false);
+          expect(drawing.hasLayout, true);
+          expect(drawing.layout.placements.length, 2);
+          expect(drawing.layout.relativePlacements.length, 2);
+          expect(drawing.getLayoutPaths().entries.length, 2);
+        });
       });
 
-      test('partplacement rotating', () {
-        final Drawing drawing = Drawing.parse([
-          'point P_1 20cm east of origin',
-          'part p P_1',
-          'layout p rotated once'
-        ]);
+      group('measurement', () {
+        test('free measurement line', (){
+          final Drawing drawing = Drawing.parse([
+            'point P_1 20cm east of origin',
+            'point P_2 10cm west of origin',
+            'line L_1 as P_1/P_2',
+            'decoration D_L1 measurement L_1',
+          ]);
 
-        expect(drawing.hasError, false);
-        expect(drawing.hasLayout, true);
-        expect(drawing.layout.placements.length, 1);
+          expect(drawing.hasError, false);
+          expect(drawing.elements.length, 5);
+        });
+
+        test('free measurement points', (){
+          final Drawing drawing = Drawing.parse([
+            'point P_1 20cm east of origin',
+            'point P_2 10cm west of origin',
+            'decoration D_templine measurement P_1/P_2',
+          ]);
+
+          expect(drawing.hasError, false);
+          expect(drawing.elements.length, 4);
+        });
+
+        test('free measurement curves', (){
+          final Drawing drawing = Drawing.parse([
+            'point P_1 20cm east of origin',
+            'point P_2 10cm west of origin',
+            'point P_3 30cm southeast of origin',
+            'curve C_1 1/2 from P_1 to P_2',
+            'curve C_2 1/2 from P_2 to P_3',
+            'decoration D_curves measurement C_1,C_2',            
+          ]);
+
+          expect(drawing.hasError, false);
+          expect(drawing.elements.length, 7);
+        });
+
       });
 
-      test('partplacement flipping rotating', () {
-        final Drawing drawing = Drawing.parse([
-          'point P_1 20cm east of origin',
-          'part p P_1',
-          'layout p flipped over x rotated once'
-        ]);
-
-        expect(drawing.hasError, false);
-        expect(drawing.hasLayout, true);
-        expect(drawing.layout.placements.length, 1);
-      });
-
-      test('relativeConstraint', () {
-        final Drawing drawing = Drawing.parse([
-          'point P_1 20cm east of origin',
-          'point P_2 10cm north of origin',
-          'part p P_1',
-          'part q P_2',
-          'layout p',
-          'layout q left of p',
-          'layout q align top with p'
-        ]);
-
-        expect(drawing.hasError, false);
-        expect(drawing.hasLayout, true);
-        expect(drawing.layout.placements.length, 2);
-        expect(drawing.layout.relativePlacements.length, 2);
-        expect(drawing.getLayoutPaths().entries.length, 2);
-      });
     });
 
     group('errors', () {
@@ -442,11 +492,26 @@ void main() {
         final Drawing drawing = Drawing.parse([
           'point P_1 20cm east of origin',
           'part p P_1',
-          'layout p rotated once flipped over x'
+          'layout part p rotated once flipped over x'
         ]);
 
         expect(drawing.hasError, true);
-        expect(drawing.errorsSummary, 'end of input expected on line 3 at position 21');
+        expect(drawing.errorsSummary, 'end of input expected on line 3 at position 26');
+      });
+
+      test('element was not added', (){
+                final Drawing drawing = Drawing.parse([
+          'point P_1 20cm east of origin',
+          'point P_2 10cm north of origin',
+          'part p P_1',
+          'part q P_2',
+          'layout part p',
+          'layout move q left of p',
+          'layout move q align top with p'
+        ]);
+
+        expect(drawing.hasError, true);
+        expect(drawing.errorsSummary, 'Layout doesn\'t contain q on line 6, Layout doesn\'t contain q on line 7');
       });
 
     });

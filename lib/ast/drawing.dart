@@ -90,6 +90,9 @@ class Drawing {
   String get errorsSummary {
     String summary = '';
     for (ParserError error in _errors) {
+      if (summary.isNotEmpty) {
+        summary += ', ';
+      }
       summary += error.toString();
     }
     return summary;
@@ -104,8 +107,9 @@ class Drawing {
     if (hasLayout) {
       PartsLayout layout = this.layout;
       for (PartLayoutPlacement placement in layout.placements) {
-        final Part part = elements.firstWhere((el) => el.label == placement.partName) as Part;
         Path partPath = Path();
+        final Part part = elements.firstWhere((el) => el.label == placement.partName) as Part;
+
         for (ParserElement partElement in part.elements) {
           if (partElement is Point) {
             Offset pointCenter = Offset(partElement.coordinate.x, -(partElement.coordinate.y)) + midpoint;
@@ -122,8 +126,9 @@ class Drawing {
             partPath.moveTo(start.dx, start.dy);
             partPath.quadraticBezierTo(control.dx, control.dy, end.dx, end.dy);
           }
+          // TODO: measurement_decorations.
         }
-
+      
         Matrix4 transform = Matrix4.identity();
         Rect bounds = partPath.getBounds();
 
@@ -204,7 +209,8 @@ class Drawing {
           }
         }
       }
-    }
+
+    } // if hasLayout
 
     return paths;
   }

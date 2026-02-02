@@ -127,23 +127,23 @@ part sleeve P_1,L_1,L_2,C_1,...
 
 With a layout, you can define how different parts are layed out on a page (which can then be exported to SVG or PDF). There is one layout per drawing. 
 
-Add parts to the layout as follows:
+Add parts to the layout using the **part** keyword:
 ```
-layout sleeve
-layout back
+layout part sleeve
+layout part back
 ```
 
 By default, parts are added the way they were initially drawn, but you can rotate them of flip them over the x and y axis
 ```
-layout yoke rotated once
-layout sleeve rotated twice flipped over x
-layout back rotated thrice flipped over xy
+layout part yoke rotated once
+layout part sleeve rotated twice flipped over x
+layout part back rotated thrice flipped over xy
 ```
 
-You can also arrange the parts relative to each other
+You can also arrange the parts relative to each other using the **move** keyword
 ```
-layout yoke to the right of back
-layout sleeve above back
-layout sleeve align left with back
-layout front align top with yoke
+layout part yoke to the right of back
+layout move sleeve above back
+layout move sleeve align left with back
+layout move front align top with yoke
 ```

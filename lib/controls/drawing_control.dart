@@ -2,12 +2,16 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:sew_ml/ast/coordinate.dart';
 import 'package:sew_ml/ast/drawing.dart';
 import 'package:sew_ml/ast/line.dart';
+import 'package:sew_ml/ast/maths_helper.dart';
+import 'package:sew_ml/ast/measurement_decoration.dart';
 import 'package:sew_ml/ast/parser_element.dart';
 import 'package:sew_ml/ast/part.dart';
 import 'package:sew_ml/ast/point.dart';
 import 'package:sew_ml/ast/quadratic_bezier.dart';
+import 'package:sew_ml/service/units_service.dart';
 
 class DrawingControl extends StatelessWidget {
   final Drawing drawing;
@@ -72,6 +76,12 @@ class DrawingPainter extends CustomPainter {
     ..color = Colors.green.shade700
     ..strokeWidth = 3.0
     ..style = PaintingStyle.stroke;
+
+    Paint measurementDecorationPaint = Paint()
+    ..color = Colors.orange.shade600
+    ..strokeWidth = 1.0
+    ..style = PaintingStyle.stroke;
+
 
     canvas.drawRect(Rect.fromCenter(center: midpoint, width: size.width, height: size.height), borderPaint);
 
@@ -156,7 +166,48 @@ class DrawingPainter extends CustomPainter {
           }
         }
       }
+      if (el is DecorationMeasurement) {
+        if (el.fromPoints || el.fromLine) {
+          // TODO: look at type. The below code is for type free
+          Offset start = Offset(el.startCoord!.x, -(el.startCoord!.y)) + midpoint;
+          Offset end = Offset(el.endCoord!.x, -(el.endCoord!.y)) + midpoint;
+          Path p = Path()..moveTo(start.dx, start.dy)..lineTo(end.dx, end.dy);
+          canvas.drawPath(p, measurementDecorationPaint);
+
+          // draw the measurement
+          final ParagraphBuilder paragraphBuilder = ParagraphBuilder(
+            ParagraphStyle(
+              fontSize: 10,
+              fontFamily: style.fontFamily,
+              fontStyle: style.fontStyle,
+              fontWeight: style.fontWeight,
+              textAlign: TextAlign.justify,
+            ),
+          )
+          ..pushStyle(style.getTextStyle());
+
+          double distanceInMM = MathsHelper.distance(el.startCoord!, el.endCoord!);
+          distanceInMM = double.parse(distanceInMM.toStringAsFixed(2));
+          String measurementString = '';
+          if (el.decorationMeasurementUnit == DecorationMeasurementUnit.mm) {
+            measurementString = '$distanceInMM mm';
+          } else if (el.decorationMeasurementUnit == DecorationMeasurementUnit.cm) {
+            measurementString = '${distanceInMM / 10.0} cm';
+          } else if (el.decorationMeasurementUnit == DecorationMeasurementUnit.inches) {
+            measurementString = '${UnitsService().toInches(distanceInMM)}"';
+          }
+          paragraphBuilder.addText(measurementString);
+
+          final Paragraph paragraph = paragraphBuilder.build()
+          ..layout(ParagraphConstraints(width: size.width));
+
+          Coordinate textCoord = MathsHelper.middleOfLine(el.startCoord!, el.endCoord!);
+          canvas.drawParagraph(paragraph, Offset(textCoord.x, -(textCoord.y)) + midpoint);
+        }
+      }
     }
+
+    // TODO: other decorations
     
   }
 

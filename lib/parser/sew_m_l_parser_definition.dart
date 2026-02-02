@@ -3,9 +3,11 @@ import 'dart:math';
 
 import 'package:petitparser/petitparser.dart';
 import 'package:sew_ml/ast/coordinate.dart';
+import 'package:sew_ml/ast/decoration.dart';
 import 'package:sew_ml/ast/line.dart';
 import 'package:sew_ml/ast/maths_helper.dart';
 import 'package:sew_ml/ast/measurement.dart';
+import 'package:sew_ml/ast/measurement_decoration.dart';
 import 'package:sew_ml/ast/parser_element.dart';
 import 'package:sew_ml/ast/part.dart';
 import 'package:sew_ml/ast/part_layout_placement.dart';
@@ -31,6 +33,7 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
       'point': buildFrom(point().end()),
       'line': buildFrom(line().end()),
       'curve': buildFrom(curveThroughTwoPoints().end()),
+      'decoration': buildFrom(decoration().end()),
       'part': buildFrom(part().end()),
       'measurement': buildFrom(measurement().end()),
       'exec': buildFrom(exec().end()),
@@ -62,10 +65,118 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
     return result;
   });
 
+  @override
+  Parser<Decoration> decoration() {
+    return super.decoration().map((result) => result[1]);
+  }
+
+  // We get [<decorationLabel>, 'measurement', lineLabel | templinelabel | list of curvelabels,
+  // type (free, horizontal, vertical), unit (in cm, in mm, in inches)]
+  @override
+  Parser<DecorationMeasurement> measurementDecoration() {
+    return super.measurementDecoration().map((result) {
+      String decorationLabel = result[0];
+      DecorationMeasurementType decorationMeasurementType = DecorationMeasurementType.values.byName(result[3]);
+      DecorationMeasurementUnit decorationMeasurementUnit = DecorationMeasurementUnit.mm;
+      if (result[4] == 'in cm') {
+        decorationMeasurementUnit = DecorationMeasurementUnit.cm;
+      } else if (result[4] == 'in mm') {
+        decorationMeasurementUnit = DecorationMeasurementUnit.mm;
+      } else if (result[4] == 'in inches') {
+        decorationMeasurementUnit = DecorationMeasurementUnit.inches;
+      }
+
+      if (result[2] is String) {
+        String measurementLabel = result[2];
+        if (measurementLabel.startsWith('L_')) {
+          if (!_parserElements.containsKey(measurementLabel)) {
+            throw ArgumentError('Unknown element $measurementLabel');
+          }
+          if (_parserElements[measurementLabel] is! Line) {
+            throw ArgumentError('$measurementLabel is not a line');
+          }
+          DecorationMeasurement decorationMeasurement = DecorationMeasurement.fromLine(
+            label: decorationLabel,
+            line: _parserElements[measurementLabel] as Line,
+            decorationMeasurementType: decorationMeasurementType,
+            decorationMeasurementUnit: decorationMeasurementUnit
+          );
+          _parserElements[decorationLabel] = decorationMeasurement;
+            return decorationMeasurement;
+
+        } else {
+          throw ArgumentError('Cannot recognize $measurementLabel as something to measure');
+        }
+
+      } else if (result[2] is List) {
+        List<String> measurementLabels = (result[2] as List).map((e) => e as String).toList();
+
+        if (measurementLabels.isNotEmpty) {
+          if (measurementLabels.first.startsWith('P_') || measurementLabels.first.startsWith('origin')) {
+            String startPointLabel = measurementLabels.first;
+            String endPointLabel = measurementLabels.last;
+
+            if (!_parserElements.containsKey(startPointLabel)) {
+              throw ArgumentError('Unknown point $startPointLabel');
+            }
+            if (_parserElements[startPointLabel] is! Point) {
+              throw ArgumentError('$startPointLabel is not a point');
+            }
+            if (!_parserElements.containsKey(endPointLabel)) {
+              throw ArgumentError('Unknown point $endPointLabel');
+            }
+            if (_parserElements[endPointLabel] is! Point) {
+              throw ArgumentError('$endPointLabel is not a point');
+            }
+
+            DecorationMeasurement decorationMeasurement = DecorationMeasurement.fromPoints(
+              label: decorationLabel, 
+              startPoint: _parserElements[startPointLabel] as Point, 
+              endPoint: _parserElements[endPointLabel] as Point, 
+              decorationMeasurementType: decorationMeasurementType, 
+              decorationMeasurementUnit: decorationMeasurementUnit);
+            _parserElements[decorationLabel] = decorationMeasurement;
+            return decorationMeasurement;
+
+          } else if (measurementLabels.first.startsWith('C_')) {
+            List<QuadraticBezier> curves = [];
+            for (String curveLabelRaw in measurementLabels) {
+              String curveLabel = curveLabelRaw.trim();
+              if (!_parserElements.containsKey(curveLabel)) {
+                throw ArgumentError('Unknown curve $curveLabel');
+              }
+              if (_parserElements[curveLabel] is! QuadraticBezier) {
+                throw ArgumentError('$curveLabel is not a curve');
+              }
+              curves.add(_parserElements[curveLabel] as QuadraticBezier);
+            }
+
+            DecorationMeasurement decorationMeasurement = DecorationMeasurement.fromCurves(
+              label: decorationLabel, 
+              curves: curves, 
+              decorationMeasurementType: decorationMeasurementType, 
+              decorationMeasurementUnit: decorationMeasurementUnit);
+            _parserElements[decorationLabel] = decorationMeasurement;
+            return decorationMeasurement;
+          }
+        } else {
+          throw ArgumentError('Cannot recognize $measurementLabel as something to measure');
+        }          
+      }
+      
+      throw ArgumentError('Cannot recognize $measurementLabel as something to measure');
+      
+    });
+  }
+
   // We get ['part', <partlabel>, <list of labels>]
   @override
   Parser<Part> part([String message = 'Expected part definition']) {
     return super.part(message).map((result) {
+      String partLabel = result[1];
+      if (_parserElements.containsKey(partLabel)) {
+        throw ArgumentError('Part $partLabel already exists');
+      }
       List<ParserElement> elements = [];
       for (dynamic label in result[2]) {
         if (label is String) {
@@ -81,7 +192,9 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
           elements.add(_findOrCreateLine(label));
         }
       }
-      return Part(/*fromLineNumber: _currentLineNumber, */label: result[1], elements: elements);
+      Part p = Part(label: partLabel, elements: elements);
+      _parserElements.putIfAbsent(partLabel, () => p);
+      return p;
     });
   }
 
@@ -470,58 +583,96 @@ class SewMLParserDefinition extends SewMLGrammarDefinition {
     });
 
     //================== Layouts =====================
+    // We get 'layout part ...' or 'layout move ...' in first result
     @override
     Parser<PartsLayout> layout() {
       return super.layout().map((result) {
         PartsLayout layout = _parserElements.putIfAbsent(PartsLayout.defaultLayoutLabel, () => PartsLayout()) as PartsLayout;
-        String partLabel = result[1][0];
-        String flipTypeOrPlacement = result[1][1];
-        if (['below', 'above', 'right of', 'to the right of', 'left of', 'to the left of',
-          'align right with', 'align left with', 'align top with', 'align bottom with'].contains(flipTypeOrPlacement)) {
-          String sourcePartName = result[1][2];
-          RelativeConstraint constraint;
-          if (flipTypeOrPlacement == 'below') {
-            constraint = RelativeConstraint.below;
-          } else if (flipTypeOrPlacement == 'above') {
-            constraint = RelativeConstraint.above;
-          } else if (flipTypeOrPlacement.contains('left of')) {
-            constraint = RelativeConstraint.left;
-          } else if (flipTypeOrPlacement.contains('right of')) {
-            constraint = RelativeConstraint.right;
-          } else if (flipTypeOrPlacement == 'align right with') {
-            constraint = RelativeConstraint.alignRight;
-          } else if (flipTypeOrPlacement == 'align left with') {
-            constraint = RelativeConstraint.alignLeft;
-          } else if (flipTypeOrPlacement == 'align bottom with') {
-            constraint = RelativeConstraint.alignBottom;
-          } else if (flipTypeOrPlacement == 'align top with') {
-            constraint = RelativeConstraint.alignTop;
-          } else {
-            throw ArgumentError('Unknown layout placement constraint $flipTypeOrPlacement');
+        String operationType = result[0];
+
+        if (operationType == 'layout part ') {
+          String partLabel = result[1][0];
+
+          if (!_parserElements.containsKey(partLabel)) {
+            throw ArgumentError('Unknown part $partLabel');
           }
-          layout.addConstraint(RelativePlacement(targetPartLabel: partLabel, sourcePartLabel: sourcePartName, constraint: constraint));
+
+          if (_parserElements[partLabel] is! Part) {
+            throw ArgumentError('Element $partLabel is not a Part');
+          }
+
+          String flipType = result[1][1];
+
+          if (!layout.containsElement(partLabel)) {
+            Flip flip = Flip.none;
+            if (flipType == 'flipped over x') {
+              flip = Flip.x;
+            } else if (flipType == 'flipped over y') {
+              flip = Flip.y;
+            } else if (flipType == 'flipped over xy') {
+              flip = Flip.xy;
+            }
+
+            String? rotation = result[1][2];
+            double rotationRad = 0;
+            if (rotation == 'rotated once') {
+              rotationRad = MathsHelper.degreesToRadians(90);
+            } else if (rotation == 'rotated twice') {
+              rotationRad = MathsHelper.degreesToRadians(180);
+            } else if (rotation == 'rotated thrice') {
+              rotationRad = MathsHelper.degreesToRadians(270);
+            }
+
+            layout.addPart(PartLayoutPlacement(partName: partLabel, flip: flip, orientationRad: rotationRad));
+          }
         }
+        
+        if (operationType == 'layout move ') {
+          String partLabel = result[1][0];
 
-        if (!layout.placements.any((p) => p.partName == partLabel)) {
-          Flip flip = Flip.none;
-          if (flipTypeOrPlacement == 'flipped over x') {
-            flip = Flip.x;
-          } else if (flipTypeOrPlacement == 'flipped over y') {
-            flip = Flip.y;
-          } else if (flipTypeOrPlacement == 'flipped over xy') {
-            flip = Flip.xy;
+          if (!_parserElements.containsKey(partLabel)) {
+            throw ArgumentError('Unknown element $partLabel');
+          }
+          if (!layout.containsElement(partLabel)) {
+            throw ArgumentError('Layout doesn\'t contain $partLabel');
           }
 
-          String? rotation = result[1][2];
-          double rotationRad = 0;
-          if (rotation == 'rotated once') {
-            rotationRad = MathsHelper.degreesToRadians(90);
-          } else if (rotation == 'rotated twice') {
-            rotationRad = MathsHelper.degreesToRadians(180);
-          } else if (rotation == 'rotated thrice') {
-            rotationRad = MathsHelper.degreesToRadians(270);
+          String placement = result[1][1];
+          if (['below', 'above', 'right of', 'to the right of', 'left of', 'to the left of',
+            'align right with', 'align left with', 'align top with', 'align bottom with'].contains(placement)) {
+            String sourcePartName = result[1][2];
+
+            if (!_parserElements.containsKey(sourcePartName)) {
+              throw ArgumentError('Unknown part $sourcePartName');
+            }
+            if (!layout.containsElement(sourcePartName)) {
+              throw ArgumentError('Layout doesn\'t contain $sourcePartName');
+            }
+
+            RelativeConstraint constraint;
+            if (placement == 'below') {
+              constraint = RelativeConstraint.below;
+            } else if (placement == 'above') {
+              constraint = RelativeConstraint.above;
+            } else if (placement.contains('left of')) {
+              constraint = RelativeConstraint.left;
+            } else if (placement.contains('right of')) {
+              constraint = RelativeConstraint.right;
+            } else if (placement == 'align right with') {
+              constraint = RelativeConstraint.alignRight;
+            } else if (placement == 'align left with') {
+              constraint = RelativeConstraint.alignLeft;
+            } else if (placement == 'align bottom with') {
+              constraint = RelativeConstraint.alignBottom;
+            } else if (placement == 'align top with') {
+              constraint = RelativeConstraint.alignTop;
+            } else {
+              throw ArgumentError('Unknown layout move constraint $placement');
+            }
+            layout.addConstraint(RelativePlacement(targetPartLabel: partLabel, sourcePartLabel: sourcePartName, constraint: constraint));
+          } else {
+            throw ArgumentError('Unknown layout move constraint $placement');
           }
-          layout.addPart(PartLayoutPlacement(partName: partLabel, flip: flip, orientationRad: rotationRad));
         }
 
         return layout;

@@ -3,6 +3,7 @@ const String measurementLabelError = 'Measurement labels should start with M_';
 const String pointLabelError = 'Point labels should start with P_';
 const String lineLabelError = 'Line labels should start with L_';
 const String curveLabelError = 'Curve labels should start with C_';
+const String decorationLabelError = 'Decoration labels should start with D_';
 
 const String expectedMeasurementDefinitionError = 'Expected measurement definition';
 const String expectedPointDefinitionError = 'Expected point definition';
