@@ -62,7 +62,7 @@ class SvgService {
 
       PartsLayout layout = drawing.layout;
       for (PartLayoutPlacement placement in layout.placements) {
-        
+
         final Part part = elements.firstWhere((el) => el.label == placement.partName) as Part;
         
         // Center the part at 0.0,0.0

@@ -17,6 +17,7 @@ class SewMLGrammarDefinition extends GrammarDefinition {
       'part': buildFrom(part().end()),
       'measurement': buildFrom(measurement().end()),
       'exec': buildFrom(exec().end()),
+      'decoration': buildFrom(decoration().end()),
       'layout': buildFrom(layout().end()),
       'unknown': buildFrom(command().end()),
     };
@@ -34,6 +35,7 @@ class SewMLGrammarDefinition extends GrammarDefinition {
         ref0(point), 
         ref0(line), 
         ref0(curve), 
+        ref0(decoration),
         ref0(layout),
         failure('Expected a measurement, point, line, curve, part or layout definition'
       )].toChoiceParser(failureJoiner: selectFarthest)).cast();
@@ -43,12 +45,28 @@ class SewMLGrammarDefinition extends GrammarDefinition {
   Parser part([String message = 'Expected part definition']) =>
     string('part').trim() &
     ref0(partlabel) &
-    (ref0(templinelabel) | ref0(pointlabel) | ref0(linelabel) | ref0(curvelabel)).starSeparated(char(',')).map((list) {
+    (ref0(templinelabel) | ref0(pointlabel) | ref0(linelabel) | ref0(curvelabel) | ref0(decorationLabel)).starSeparated(char(',')).map((list) {
         return list.elements;
     });
 
   Parser partlabel() => (letter() | anyOf('_-') | digit()).plus().flatten().trim();
   
+  Parser decoration() =>
+    string('decoration').trim() &
+    [ref0(measurementDecoration)].toChoiceParser(failureJoiner: selectFarthest); // TODO: other types of Decoration get plugged in here
+
+  Parser decorationLabel() => 
+      seq2((string('D_') | failure(decorationLabelError)), (letter() | anyOf('_-') | digit()).plus()).flatten().trim();
+
+  Parser measurementDecoration() =>
+    ref0(decorationLabel) &
+    string('measurement').trim() &
+    [ref0(linelabel), ref0(templinelabel), ref0(curvelabel).starSeparated(char(',')).map((list) {
+        return list.elements;
+    })].toChoiceParser(failureJoiner: selectFarthest) &
+    [string('horizontal'), string('vertical'), string('free')].toChoiceParser(failureJoiner: selectFarthest).optionalWith('free') &
+    [string('in cm'), string('in mm'), string('in inches')].toChoiceParser(failureJoiner: selectFarthest).optionalWith('in mm');
+
   Parser<String> pointlabel([String message = pointLabelError]) => 
     (
       string('origin') | 
@@ -315,8 +333,13 @@ class SewMLGrammarDefinition extends GrammarDefinition {
   //=========== Layouts ===============
 
   Parser layout() =>
-    string('layout').trim() &
-    [ref0(relativeConstraint), ref0(partPlacement)].toChoiceParser(failureJoiner: selectFarthest);
+    [ref0(layoutPart), ref0(layoutMove)].toChoiceParser(failureJoiner: selectFarthest);
+
+  Parser layoutPart() =>
+    string('layout part ').trim() & ref0(partPlacement);
+
+  Parser layoutMove() =>
+    string('layout move ').trim() & ref0(relativeConstraint);
 
   Parser relativeConstraint() =>
     (ref0(partlabel) | failure('Expected a part label')) & 

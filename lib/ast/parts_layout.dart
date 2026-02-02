@@ -26,6 +26,8 @@ class PartsLayout extends ParserElement {
     return true;
   }
 
+  bool containsElement(String elementName) => placements.any((p) => p.partName == elementName);
+
   bool addConstraint(RelativePlacement placement) {
     if (_relativePlacements.contains(placement)) {
       return false;
